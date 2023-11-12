@@ -81,7 +81,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.0
         env:
           B_ENV: ${{ inputs.target }}
-          TNTB__DB_DSN: ${{ inputs.target == 'prod' && secrets.DB_DSN_PROD || secrets.DB_DSN_TEST }}
+          TNTB__DB_DSN: ${{ inputs.target == 'prod' && secrets.DB_DSN_TNTB_PROD || secrets.DB_DSN_TNTB_TEST }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
