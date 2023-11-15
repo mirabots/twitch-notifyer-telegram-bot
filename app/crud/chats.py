@@ -17,9 +17,7 @@ async def owner_exists(owner_id: int) -> bool:
 async def add_chat(chat_id: int, owner_id: int) -> bool:
     async with async_session() as session:
         async with session.begin():
-            db_chat = await session.scalar(
-                select(Chats).where(Chats.owner_id == owner_id, Chats.id == chat_id)
-            )
+            db_chat = await session.scalar(select(Chats).where(Chats.id == chat_id))
             if db_chat:
                 return False
 
