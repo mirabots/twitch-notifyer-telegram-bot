@@ -143,4 +143,4 @@ async def get_all_user_subscriptions_count(chat_ids: list[int]) -> int:
                 .where(Subscriptions.chat_id.in_(chat_ids))
                 .distinct()
             )
-            return len(db_subscriptions.all())
+            return len(db_subscriptions.fetchall())
