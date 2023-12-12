@@ -36,6 +36,8 @@ cfg.load_secrets()
 print("INFO:\t  Secrets were loaded to config")
 
 
+from contextlib import asynccontextmanager
+
 import uvicorn
 from aiogram import Bot, Dispatcher, types
 from common.tasks import send_notifications_to_chats
@@ -51,20 +53,12 @@ from telegram.middlewares import (
 from telegram.routes import router as main_router
 from telegram.utils import COMMANDS
 
-FastAPP = FastAPI(
-    title="",
-    version="",
-    exception_handlers=exception_handlers,
-    openapi_url=None,
-    docs_url=None,
-    redoc_url=None,
-)
 bot = Bot(token=cfg.TELEGRAM_TOKEN)
 dp = Dispatcher()
 
 
-@FastAPP.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan_function(app: FastAPI):
     print(f"INFO:\t  {args.env} running {args.host}:{args.port}")
     print()
 
@@ -92,11 +86,20 @@ async def startup():
                 chat_id=cfg.OWNER_ID, text="ADMIN MESSAGE\nBOT STARTED"
             )
 
+    yield
 
-@FastAPP.on_event("shutdown")
-async def shutdown():
     await _engine.dispose()
     await bot.session.close()
+
+
+FastAPP = FastAPI(
+    title="",
+    version="",
+    exception_handlers=exception_handlers,
+    openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
+)
 
 
 @FastAPP.post("/webhooks/telegram", dependencies=[Depends(verify_telegram_secret)])

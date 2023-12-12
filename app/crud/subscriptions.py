@@ -133,3 +133,12 @@ async def change_template(chat_id: int, streamer_id: str, new_template: str) -> 
                 )
                 .values(message_template=new_template)
             )
+
+
+async def get_all_user_subscriptions_count(chat_ids: list[int]) -> int:
+    async with async_session() as session:
+        async with session.begin():
+            db_subscriptions = await session.scalars(
+                select(Subscriptions).where(Subscriptions.chat_id.in_(chat_ids))
+            )
+            return len(db_subscriptions)

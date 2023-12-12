@@ -255,7 +255,7 @@ async def subscriptions_handler(
         else:
             streamers_with_names = await twitch.get_streamers_names(streamers)
             message_text = (
-                f"Subscriptions ({len(streamers_with_names)}):\n ●"
+                f"Subscriptions ({len(streamers_with_names)}):\n● "
                 + "\n● ".join(
                     sorted(
                         list(streamers_with_names.values()),
@@ -276,6 +276,14 @@ async def subscribe_handler(
     )
 
     with suppress(TelegramBadRequest):
+        owned_chats = await crud_chats.get_owned_chats(callback.from_user.id)
+        streamers_count = await crud_subs.get_all_user_subscriptions_count(owned_chats)
+        if streamers_count > 1000 and callback.from_user.username != cfg.OWNER_LOGIN:
+            await callback.message.edit_text(
+                text="You have reached subs limit (1000)", reply_markup=None
+            )
+            return
+
         await callback.message.edit_text(
             text=f"'{chat_name}' choosen", reply_markup=None
         )
