@@ -27,3 +27,4 @@ class Subscriptions(Base):
     chat_id: Mapped[int] = mapped_column(BIGINT, primary_key=True)
     streamer_id: Mapped[str] = mapped_column(primary_key=True)
     message_template: Mapped[str] = mapped_column(Text)
+    picture_mode: Mapped[str] = mapped_column(nullable=False)

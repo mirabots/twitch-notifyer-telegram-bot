@@ -16,12 +16,15 @@ from .utils import (
     CallbackChooseChat,
     CallbackChooseStreamer,
     CallbackDefault,
+    CallbackPicture,
+    FormChangePictureMode,
     FormChangeTemplate,
     FormSubscribe,
     get_choosed_callback_text,
     get_keyboard_abort,
     get_keyboard_chats,
     get_keyboard_default,
+    get_keyboard_picture,
     get_keyboard_streamers,
 )
 
@@ -201,6 +204,8 @@ async def abort_handler(
         action_text = "Unsubscribe"
     if action == "tmplt":
         action_text = "Changing template"
+    if action == "pctr":
+        action_text = "Changing picture mode"
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(
@@ -213,6 +218,7 @@ async def abort_handler(
 @router.message(Command("subscribe"))
 @router.message(Command("unsubscribe"))
 @router.message(Command("template"))
+@router.message(Command("picture"))
 async def chats_handler(message: types.Message, bot: Bot):
     command_text = message.text.rstrip()
 
@@ -223,6 +229,8 @@ async def chats_handler(message: types.Message, bot: Bot):
         action = "unsub"
     if "/template" in command_text:
         action = "tmplt"
+    if "/picture" in command_text:
+        action = "pctr"
 
     chats_ids = await crud_chats.get_owned_chats(message.from_user.id)
     chats = [await bot.get_chat(chat_id) for chat_id in chats_ids]
@@ -484,3 +492,103 @@ async def template_default_handler(
             text="Default template was set",
             reply_markup=None,
         )
+
+
+@router.callback_query(CallbackChooseChat.filter(F.action == "pctr"))
+async def picture_handler(
+    callback: types.CallbackQuery, callback_data: CallbackChooseChat
+):
+    chat_id = callback_data.id
+    chat_name = get_choosed_callback_text(
+        callback.message.reply_markup.inline_keyboard, callback.data
+    )
+
+    with suppress(TelegramBadRequest):
+        await callback.message.edit_text(
+            text=f"'{chat_name}' choosen", reply_markup=None
+        )
+        streamers = await crud_subs.get_subscriptions(chat_id)
+        if not streamers:
+            await callback.message.answer(text="No subscriptions", reply_markup=None)
+        else:
+            streamers_with_names = await twitch.get_streamers_names(streamers)
+            main_keyboard = get_keyboard_streamers(
+                "pctr", streamers_with_names, chat_id
+            )
+            main_keyboard.adjust(3)
+            abort_keyboard = get_keyboard_abort(callback_data.action)
+            main_keyboard.attach(abort_keyboard)
+
+            await callback.message.answer(
+                text="Choose streamer to change notification picture mode:",
+                reply_markup=main_keyboard.as_markup(),
+            )
+
+
+@router.callback_query(CallbackChooseStreamer.filter(F.action == "pctr"))
+async def picture_streamer_handler(
+    callback: types.CallbackQuery,
+    callback_data: CallbackChooseStreamer,
+    state: FSMContext,
+):
+    streamer_name = get_choosed_callback_text(
+        callback.message.reply_markup.inline_keyboard, callback.data
+    )
+
+    with suppress(TelegramBadRequest):
+        current_picture_mode = await crud_subs.get_current_picture_mode(
+            callback_data.chat_id, callback_data.streamer_id
+        )
+
+        await callback.message.edit_text(
+            text=f"'{streamer_name}' choosen", reply_markup=None
+        )
+        main_keyboard = get_keyboard_picture(
+            callback_data.action, ["Stream start screen", "Disabled"]
+        )
+        abort_keyboard = get_keyboard_abort(callback_data.action)
+        main_keyboard.attach(abort_keyboard)
+        sended_message = await callback.message.answer(
+            text=f"Change notification picture mode\nCurrent mode - {current_picture_mode}",
+            reply_markup=main_keyboard.as_markup(),
+        )
+
+        await state.set_data(
+            {
+                "chat_id": callback_data.chat_id,
+                "streamer_id": callback_data.streamer_id,
+                "outgoing_form_message_id": sended_message.message_id,
+            }
+        )
+        await state.set_state(FormChangePictureMode.template_text)
+
+
+@router.callback_query(CallbackPicture.filter(F.action == "pctr"))
+async def picture_streamer_mode_handler(
+    callback: types.CallbackQuery,
+    callback_data: CallbackPicture,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
+    picture_mode = get_choosed_callback_text(
+        callback.message.reply_markup.inline_keyboard, callback.data
+    )
+    state_data = await state.get_data()
+    outgoing_form_message_id = state_data["outgoing_form_message_id"]
+
+    with suppress(TelegramBadRequest):
+        await bot.edit_message_reply_markup(
+            chat_id=callback.from_user.id,
+            message_id=outgoing_form_message_id,
+            reply_markup=None,
+        )
+
+    chat_id = state_data["chat_id"]
+    streamer_id = state_data["streamer_id"]
+    if picture_mode == "New picture":
+        pass
+    else:
+        await state.clear()
+
+        await crud_subs.change_picture_mode(chat_id, streamer_id, picture_mode)
+        await callback.message.answer(text=f"New mode ('{picture_mode}') was set")
