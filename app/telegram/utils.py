@@ -13,6 +13,7 @@ COMMANDS = [
         command="subscribe", description="Subscribe to stream notification"
     ),
     types.BotCommand(command="template", description="Change notification template"),
+    types.BotCommand(command="picture", description="Change notification picture mode"),
     types.BotCommand(
         command="unsubscribe", description="Unsubscribe from stream notification"
     ),
@@ -42,12 +43,21 @@ class CallbackDefault(CallbackData, prefix="dflt"):
     chat_id: int
 
 
+class CallbackPicture(CallbackData, prefix="pctr"):
+    action: str
+
+
 class FormSubscribe(StatesGroup):
     streamer_name = State()
 
 
 class FormChangeTemplate(StatesGroup):
     template_text = State()
+
+
+class FormChangePictureMode(StatesGroup):
+    picture_mode = State()
+    picture_input = State()
 
 
 def get_keyboard_chats(chats: list[types.Chat], action: str) -> InlineKeyboardBuilder:
@@ -95,6 +105,13 @@ def get_keyboard_default(
             action=action, streamer_id=streamer_id, chat_id=chat_id
         ),
     )
+    return keyboard
+
+
+def get_keyboard_picture(action: str, choices: list[str]) -> InlineKeyboardBuilder:
+    keyboard = InlineKeyboardBuilder()
+    for choice in choices:
+        keyboard.button(text=choice, callback_data=CallbackPicture(action=action))
     return keyboard
 
 
