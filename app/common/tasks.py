@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from string import Template
 
 from aiogram import Bot, types
@@ -63,13 +63,13 @@ async def send_notifications_to_chats(bot: Bot, event: dict, message_id: str) ->
         if chat["picture_mode"] == "Disabled":
             await bot.send_message(
                 chat_id=chat["id"],
-                caption=message_text,
-                caption_entities=message_entities,
+                text=message_text,
+                entities=message_entities,
                 link_preview_options=types.LinkPreviewOptions(is_disabled=True),
             )
         elif chat["picture_mode"] == "Stream start screenshot":
             if stream_picture == None:
-                utc_now = datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
+                utc_now = datetime.now(tz=timezone.utc).strftime("%Y_%m_%d_%H_%M_%S")
                 stream_picture = types.URLInputFile(
                     stream_info["thumbnail_url"].format(width="1920", height="1080"),
                     filename=f"{streamer_login}_{utc_now}.jpg",
