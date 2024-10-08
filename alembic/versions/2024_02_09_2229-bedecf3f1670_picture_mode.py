@@ -25,6 +25,17 @@ def upgrade() -> None:
         sa.Column("picture_mode", sa.String(), nullable=True),
         schema="tntb",
     )
+    conn = op.get_bind()
+    conn.execute(
+        sa.text("UPDATE tntb.subscriptions SET picture_mode='Stream start screen';")
+    )
+    op.alter_column(
+        "subscriptions",
+        "picture_mode",
+        existing_type=sa.String(),
+        nullable=False,
+        schema="tntb",
+    )
     # ### end Alembic commands ###
 
 
