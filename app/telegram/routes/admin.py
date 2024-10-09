@@ -75,14 +75,6 @@ async def bot_active_handler(message: types.Message):
 
 @router.message(Command("secrets_reload"))
 async def secrets_reload_handler(message: types.Message):
-    unavailable_secrets = await cfg.reload_secrets()
-    message_text = "Secrets were reloaded"
-    if unavailable_secrets:
-        message_text += "\nUnavailable secrets:\n" + "\n".join(unavailable_secrets)
-
-    with suppress(TelegramBadRequest):
-        await message.answer(text=message_text)
-
     logger.info("Reloading secrets")
     error = await cfg.load_secrets_async()
     if error:
