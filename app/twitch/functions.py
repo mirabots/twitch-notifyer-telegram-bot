@@ -1,6 +1,9 @@
-from .api import (
+from app.common.config import cfg
+from app.common.utils import get_logger, levelDEBUG, levelINFO
+from app.twitch.api import (
     _auth,
     _get_channel_info,
+    _get_costs,
     _get_stream_info,
     _get_streamer_id,
     _get_streamer_picture,
@@ -8,6 +11,8 @@ from .api import (
     _subscribe_event,
     _unsubscribe_event,
 )
+
+logger = get_logger(levelDEBUG if cfg.ENV == "dev" else levelINFO)
 
 
 async def get_streamer_id(streamer_name: str) -> str:
@@ -17,7 +22,7 @@ async def get_streamer_id(streamer_name: str) -> str:
         answer = await _get_streamer_id(streamer_name)
 
     if answer.status_code != 200:
-        print("get id error")
+        logger.error("get id error")
         return ""
 
     answer_json = answer.json()
@@ -44,7 +49,7 @@ async def get_streamer_picture(streamer_id: str) -> str:
         await _auth()
         answer = await _get_streamer_picture(streamer_id)
     if answer.status_code != 200:
-        print("get picture error")
+        logger.error("get picture error")
         return ""
 
     answer_json = answer.json()
@@ -59,7 +64,7 @@ async def get_stream_info(streamer_id: str) -> dict[str, str]:
         await _auth()
         answer = await _get_stream_info(streamer_id)
     if answer.status_code != 200:
-        print("get stream info error")
+        logger.error("get stream info error")
         return {}
     answer_json = answer.json()
     if not answer_json["data"]:
@@ -77,7 +82,7 @@ async def get_channel_info(streamer_id: str) -> dict[str, str]:
         await _auth()
         answer = await _get_channel_info(streamer_id)
     if answer.status_code != 200:
-        print("get channel info error")
+        logger.error("get channel info error")
         return {}
     answer_json = answer.json()
     if not answer_json["data"]:
@@ -94,7 +99,7 @@ async def subscribe_event(streamer_id: str, event_type: str) -> str:
         await _auth()
         answer = await _subscribe_event(streamer_id, event_type)
     if answer.status_code != 202:
-        print("subscribe error")
+        logger.error("subscribe error")
         return ""
 
     answer_json = answer.json()
@@ -109,4 +114,20 @@ async def unsubscribe_event(event_id: str) -> None:
         await _auth()
         answer = await _unsubscribe_event(event_id)
     if answer.status_code != 204:
-        print("unsubscribe error")
+        logger.error("unsubscribe error")
+
+
+async def get_costs() -> dict[str, int]:
+    answer = await _get_costs()
+    if answer.status_code == 401:
+        await _auth()
+        answer = await _get_costs()
+    if answer.status_code != 200:
+        logger.error("get costs info error")
+        return {}
+    answer_json = answer.json()
+    return {
+        "total": answer_json["total"],
+        "total_cost": answer_json["total_cost"],
+        "max_total_cost": answer_json["max_total_cost"],
+    }

@@ -3,23 +3,21 @@ from contextlib import suppress
 from aiogram import Bot, Router, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
-from common.config import cfg
-from crud import admin as crud_admin
-from twitch import functions as twitch
+
+from app.common.config import cfg
+from app.common.utils import get_logger, levelDEBUG, levelINFO
+from app.crud import admin as crud_admin
+from app.telegram.commands import COMMANDS_ADMIN
+from app.twitch import functions as twitch
 
 router = Router()
+logger = get_logger(levelDEBUG if cfg.ENV == "dev" else levelINFO)
 
 
 @router.message(Command("admin"))
 async def admin_commands_handler(message: types.Message):
-    admin_commands = {
-        "/users": "List all users with their channels",
-        "/streamers": "List subscribed streamers",
-        "/pause": "(Un)Pause bot",
-        "/secrets": "Reload secrets",
-    }
     message_text = "Available admin commands:"
-    for command, description in admin_commands.items():
+    for command, description in COMMANDS_ADMIN.items():
         message_text += f"\n● {description}\n○ {command}"
 
     with suppress(TelegramBadRequest):
@@ -75,12 +73,45 @@ async def bot_active_handler(message: types.Message):
         await message.answer(text=message_text)
 
 
-@router.message(Command("secrets"))
+@router.message(Command("secrets_reload"))
 async def secrets_reload_handler(message: types.Message):
     unavailable_secrets = await cfg.reload_secrets()
     message_text = "Secrets were reloaded"
     if unavailable_secrets:
         message_text += "\nUnavailable secrets:\n" + "\n".join(unavailable_secrets)
+
+    with suppress(TelegramBadRequest):
+        await message.answer(text=message_text)
+
+    logger.info("Reloading secrets")
+    error = await cfg.load_secrets_async()
+    if error:
+        logger.error(error)
+        with suppress(TelegramBadRequest):
+            await message.answer(text=error)
+            return
+
+    no_secrets = cfg.check_secrets(get_db=False)
+    if no_secrets:
+        logger.error(f"No secrets found: {no_secrets}")
+        with suppress(TelegramBadRequest):
+            await message.answer(text=f"No secrets found:\n{str(no_secrets)}")
+            return
+
+    cfg.apply_secrets(get_db=False)
+    logger.info("Secrets were reloaded")
+    with suppress(TelegramBadRequest):
+        await message.answer(text="Reloaded")
+
+
+@router.message(Command("costs"))
+async def costs_handler(message: types.Message):
+    costs_info = await twitch.get_costs()
+    message_text = "Error getting costs info("
+    if costs_info:
+        message_text = ""
+        for cost, value in costs_info.items():
+            message_text += f"\n● {cost}\n○ {value}"
 
     with suppress(TelegramBadRequest):
         await message.answer(text=message_text)

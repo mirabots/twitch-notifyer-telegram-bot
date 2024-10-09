@@ -1,5 +1,6 @@
 import httpx
-from common.config import cfg
+
+from app.common.config import cfg
 
 
 async def _auth() -> None:
@@ -109,4 +110,15 @@ async def _unsubscribe_event(event_id: str) -> httpx.Response:
                 "Authorization": f"Bearer {cfg.TWITCH_BEARER}",
             },
             params={"id": event_id},
+        )
+
+
+async def _get_costs() -> httpx.Response:
+    async with httpx.AsyncClient() as ac:
+        return await ac.get(
+            "https://api.twitch.tv/helix/eventsub/subscriptions",
+            headers={
+                "Client-Id": cfg.TWITCH_CLIENT_ID,
+                "Authorization": f"Bearer {cfg.TWITCH_BEARER}",
+            },
         )

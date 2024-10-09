@@ -3,8 +3,10 @@ from typing import Any, Awaitable, Callable, Dict
 
 from aiogram import BaseMiddleware, types
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
-from common.config import cfg
-from crud.chats import owner_exists
+
+from app.common.config import cfg
+from app.crud.chats import owner_exists
+from app.telegram.commands import COMMANDS_ADMIN
 
 
 class AuthChatMiddleware(BaseMiddleware):
@@ -62,7 +64,7 @@ class AdminMiddleware(BaseMiddleware):
         data: Dict[str, Any],
     ) -> Any:
         command = event.text.rstrip()
-        admin_commands = ["/admin", "/users", "/streamers", "/pause", "/secrets"]
+        admin_commands = ["/admin", *COMMANDS_ADMIN.keys()]
 
         user_id = event.from_user.id
         user_name = event.from_user.username
