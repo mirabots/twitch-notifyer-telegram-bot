@@ -159,7 +159,7 @@ async def subscribe_form(message: types.Message, state: FSMContext, bot: Bot) ->
         await message.answer(text="No streamer with this name")
         return
 
-    if not (await crud_subs.check_streamer(streamer_id)):
+    if (await crud_subs.check_streamer(streamer_id)) == None:
         subscription_id = await twitch.subscribe_event(streamer_id, "stream.online")
         if not subscription_id:
             await message.answer(text="Subscription error from twitch")
