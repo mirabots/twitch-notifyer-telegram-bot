@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 from litestar.logging import LoggingConfig
 
-# levelDEBUG = logging.INFO
 levelDEBUG = logging.DEBUG
+# levelDEBUG = logging.INFO
 levelINFO = logging.INFO
 FORMAT = "%(levelname)-8s\t%(asctime)s\t\t%(message)s"
 

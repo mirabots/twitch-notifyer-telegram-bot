@@ -20,7 +20,8 @@ async def webhook_telegram(data: dict[str, Any], headers: dict[str, str]) -> Any
 
     logger.debug(data)
     telegram_update = types.Update(**data)
-    return await dp.feed_update(bot=bot, update=telegram_update)
+    await dp.feed_update(bot=bot, update=telegram_update)
+    return Response(status_code=HTTP_204_NO_CONTENT, content=None)
 
 
 @post("/webhooks/twitch/stream-online")

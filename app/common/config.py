@@ -41,7 +41,7 @@ class ConfigManager:
             self.logger.error(error)
             self.logger.error("waiting 120 secs for secrets storage")
             sleep(120)
-        error = self.load_secrets_sync()
+            error = self.load_secrets_sync()
         if error:
             self.logger.error(error)
             sys.exit(1)

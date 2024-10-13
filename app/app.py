@@ -54,8 +54,8 @@ async def lifespan_function(app: Litestar) -> AsyncGenerator[None, None]:
         await _engine.dispose()
 
 
-def internal_server_error_handler(request: Request, exc: Exception) -> Response:
-    logger.warning(exc)
+def internal_server_error_handler(_: Request, exc: Exception) -> Response:
+    logger.error(exc)
     return Response(
         status_code=500,
         content={"detail": "Server error"},
@@ -66,6 +66,7 @@ app = Litestar(
     [litestar_router],
     lifespan=[lifespan_function],
     logging_config=logging_config,
+    debug=True,
     exception_handlers={
         HTTP_500_INTERNAL_SERVER_ERROR: internal_server_error_handler,
     },
