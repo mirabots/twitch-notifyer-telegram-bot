@@ -5,7 +5,7 @@ from aiogram import BaseMiddleware, types
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
 from app.common.config import cfg
-from app.crud.chats import owner_exists
+from app.crud.chats import user_exists
 from app.telegram.commands import COMMANDS_ADMIN
 
 
@@ -28,7 +28,7 @@ class AuthChatMiddleware(BaseMiddleware):
             else:
                 return await handler(event, data)
 
-        if not (await owner_exists(user_id)):
+        if not (await user_exists(user_id)):
             return
 
         return await handler(event, data)
@@ -49,8 +49,8 @@ class ActiveBotMiddleware(BaseMiddleware):
             return await handler(event, data)
         else:
             if (
-                user_id == cfg.OWNER_ID
-                and user_name == cfg.OWNER_LOGIN
+                user_id == cfg.BOT_OWNER_ID
+                and user_name == cfg.BOT_OWNER_LOGIN
                 and command == "/pause"
             ):
                 return await handler(event, data)
@@ -70,7 +70,7 @@ class AdminMiddleware(BaseMiddleware):
         user_name = event.from_user.username
 
         if command in admin_commands:
-            if user_id == cfg.OWNER_ID and user_name == cfg.OWNER_LOGIN:
+            if user_id == cfg.BOT_OWNER_ID and user_name == cfg.BOT_OWNER_LOGIN:
                 return await handler(event, data)
             else:
                 return

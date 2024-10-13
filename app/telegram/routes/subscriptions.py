@@ -41,10 +41,10 @@ async def add_channel_handler(message: types.Message, bot: Bot):
 
 
 @router.message(Command("chats"))
-async def owned_chats_handler(message: types.Message, bot: Bot):
-    owner_id = message.from_user.id
+async def user_chats_handler(message: types.Message, bot: Bot):
+    user_id = message.from_user.id
 
-    chats = await crud_chats.get_owned_chats(owner_id)
+    chats = await crud_chats.get_user_chats(user_id)
     message_text = f"Owned chats/channels ({len(chats)}):"
     for chat_id in chats:
         chat_info = await bot.get_chat(chat_id)
@@ -68,7 +68,7 @@ async def chats_handler(message: types.Message, bot: Bot):
     if "/template" in command_text:
         action = "tmplt"
 
-    chats_ids = await crud_chats.get_owned_chats(message.from_user.id)
+    chats_ids = await crud_chats.get_user_chats(message.from_user.id)
     chats = [await bot.get_chat(chat_id) for chat_id in chats_ids]
 
     main_keyboard = get_keyboard_chats(chats, action)

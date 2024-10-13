@@ -99,7 +99,6 @@ async def get_subscribed_chats(streamer_id: str) -> list[dict[str, int | str]]:
         db_subscriptions = await session.scalars(
             select(Subscriptions).where(Subscriptions.streamer_id == streamer_id)
         )
-
         return [
             {"id": sub.chat_id, "template": sub.message_template}
             for sub in db_subscriptions
@@ -111,7 +110,6 @@ async def get_subscriptions(chat_id: int) -> list[str]:
         db_subscriptions = await session.scalars(
             select(Subscriptions).where(Subscriptions.chat_id == chat_id)
         )
-
         return [streamer.streamer_id for streamer in db_subscriptions]
 
 
@@ -144,15 +142,14 @@ async def change_template(chat_id: int, streamer_id: str, new_template: str) -> 
         )
 
 
-async def get_subscribed_owners(streamer_id: str) -> list[int]:
+async def get_subscribed_users(streamer_id: str) -> list[int]:
     async with async_session() as session, session.begin():
         chats = await session.scalars(
             select(Chats)
             .select_from(join(Chats, Subscriptions, Chats.id == Subscriptions.chat_id))
             .where(Subscriptions.streamer_id == streamer_id)
         )
-
-        return set([chat.owner_id for chat in chats])
+        return set([chat.user_id for chat in chats])
 
 
 async def remove_streamer(streamer_id: str) -> None:

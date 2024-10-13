@@ -1,3 +1,4 @@
+import traceback
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -45,7 +46,9 @@ async def lifespan_function(app: Litestar) -> AsyncGenerator[None, None]:
     await bot.set_my_description("Twitch stream.online notification bot")
 
     if cfg.ENV != "dev":
-        await bot.send_message(chat_id=cfg.OWNER_ID, text="ADMIN MESSAGE\nBOT STARTED")
+        await bot.send_message(
+            chat_id=cfg.BOT_OWNER_ID, text="ADMIN MESSAGE\nBOT STARTED"
+        )
 
     try:
         yield
@@ -56,6 +59,7 @@ async def lifespan_function(app: Litestar) -> AsyncGenerator[None, None]:
 
 def internal_server_error_handler(_: Request, exc: Exception) -> Response:
     logger.error(exc)
+    traceback.print_exception(exc)
     return Response(
         status_code=500,
         content={"detail": "Server error"},
@@ -66,7 +70,7 @@ app = Litestar(
     [litestar_router],
     lifespan=[lifespan_function],
     logging_config=logging_config,
-    debug=True,
+    # debug=True,
     exception_handlers={
         HTTP_500_INTERNAL_SERVER_ERROR: internal_server_error_handler,
     },

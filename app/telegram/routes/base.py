@@ -1,9 +1,14 @@
-import time
 from contextlib import suppress
 
 from aiogram import Bot, Router, types
+from aiogram.enums.chat_member_status import ChatMemberStatus
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.filters import IS_ADMIN, IS_NOT_MEMBER, ChatMemberUpdatedFilter, Command
+from aiogram.filters import (
+    ADMINISTRATOR,
+    IS_NOT_MEMBER,
+    ChatMemberUpdatedFilter,
+    Command,
+)
 from aiogram.fsm.context import FSMContext
 from aiogram.utils import formatting
 
@@ -21,13 +26,12 @@ logger = get_logger(levelDEBUG if cfg.ENV == "dev" else levelINFO)
 @router.message(Command("start"))
 async def start_handler(message: types.Message):
     chat_id = message.chat.id
-    owner_id = message.from_user.id
+    user_id = message.from_user.id
+    user_name = message.from_user.username
 
-    logger.info(
-        f"Start: {owner_id=} {message.from_user.username=} {chat_id=} {time.asctime()}"
-    )
+    logger.info(f"Start user: {user_id=} {user_name=} {chat_id=}")
 
-    chat_added = await crud_chats.add_chat(chat_id, owner_id)
+    chat_added = await crud_chats.add_chat(chat_id, user_id)
     message_text = (
         "Bot started, this chat was added\nUse /info for some information"
         if chat_added
@@ -37,90 +41,101 @@ async def start_handler(message: types.Message):
         await message.answer(text=message_text)
 
 
-@router.my_chat_member(ChatMemberUpdatedFilter(IS_NOT_MEMBER >> IS_ADMIN))
+@router.my_chat_member(ChatMemberUpdatedFilter(IS_NOT_MEMBER >> ADMINISTRATOR))
 async def start_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
     if not cfg.BOT_ACTIVE:
         return
     if event.chat.type in ("group", "supergroup", "private"):
         return
 
-    owner_name = event.from_user.username
-    owner_id = event.from_user.id
     chat_id = event.chat.id
+    chat_title = event.chat.title
+    user_id = event.from_user.id
+    user_name = event.from_user.username
 
     if (
-        not (await crud_chats.owner_exists(owner_id))
-        or owner_name not in cfg.TELEGRAM_ALLOWED
+        not (await crud_chats.user_exists(user_id))
+        or user_name not in cfg.TELEGRAM_ALLOWED
     ):
         return
+    sender_info = await bot.get_chat_member(chat_id, user_id)
+    if sender_info.status != ChatMemberStatus.CREATOR:
+        return
 
-    logger.info(
-        f"Start: {owner_id=} {event.from_user.username=} {chat_id=} {event.chat.title=} {time.asctime()}"
-    )
+    logger.info(f"Start channel: {user_id=} {user_name=} {chat_id=} {chat_title=}")
 
-    chat_added = await crud_chats.add_chat(chat_id, owner_id)
+    chat_added = await crud_chats.add_chat(chat_id, user_id)
     if chat_added:
-        message_text = f"Notification\nChannel '{event.chat.title}' added"
+        message_text = f"Notification\nChannel '{chat_title}' added"
         with suppress(TelegramBadRequest):
-            await bot.send_message(chat_id=owner_id, text=message_text)
+            await bot.send_message(chat_id=user_id, text=message_text)
 
 
 @router.message(Command("stop"))
 async def stop_handler(message: types.Message, bot: Bot):
     chat_id = message.chat.id
-    owner_id = message.from_user.id
+    user_id = message.from_user.id
+    user_name = message.from_user.username
 
-    logger.info(f"Stop: {owner_id=} {message.from_user.username=} {time.asctime()}")
+    logger.info(f"Stop user: {user_id=} {user_name=}")
 
-    owned_chats = await crud_chats.get_owned_chats(owner_id)
-    if not owned_chats:
+    user_chats = await crud_chats.get_user_chats(user_id)
+    if not user_chats:
         message_text = "Bot already stopped"
         await message.answer(text=message_text)
         return
 
-    await crud_chats.remove_chats(owned_chats)
+    await crud_chats.remove_chats(user_chats)
     subscriptions = await crud_subs.remove_unsubscribed_streamers()
     for subscription_id in subscriptions:
         await twitch.unsubscribe_event(subscription_id)
 
-    for chat_id in owned_chats:
-        if chat_id != owner_id:
+    for chat_id in user_chats:
+        if chat_id != user_id:
             await bot.leave_chat(chat_id)
 
     message_text = (
         "Bot stopped, owned chats/channels were leaved, streamers unsubscribed"
     )
-    await message.answer(text=message_text)
+    with suppress(TelegramBadRequest):
+        await message.answer(text=message_text)
 
 
-@router.my_chat_member(ChatMemberUpdatedFilter(IS_ADMIN >> IS_NOT_MEMBER))
+@router.my_chat_member(ChatMemberUpdatedFilter(ADMINISTRATOR >> IS_NOT_MEMBER))
 async def stop_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
     if not cfg.BOT_ACTIVE:
         return
     if event.chat.type in ("group", "supergroup", "private"):
         return
 
-    owner_name = event.from_user.username
-    owner_id = event.from_user.id
     chat_id = event.chat.id
+    chat_title = event.chat.title
+    user_id = event.from_user.id
+    user_name = event.from_user.username
 
+    if not (await crud_chats.chat_exists(chat_id)):
+        return
     if (
-        not (await crud_chats.owner_exists(owner_id))
-        or owner_name not in cfg.TELEGRAM_ALLOWED
+        not (await crud_chats.user_exists(user_id))
+        or user_name not in cfg.TELEGRAM_ALLOWED
     ):
+        message_text = (
+            f"Notification\nBot leaved from channel '{chat_title}' by '{user_name}'"
+        )
+        with suppress(TelegramBadRequest):
+            await bot.send_message(chat_id=user_id, text=message_text)
         return
 
-    logger.info(
-        f"Stop: {owner_id=} {event.from_user.username=} {chat_id=} {event.chat.title=} {time.asctime()}"
-    )
+    logger.info(f"Stop channel: {user_id=} {user_name=} {chat_id=} {chat_title=}")
 
     await crud_chats.remove_chats([chat_id])
     subscriptions = await crud_subs.remove_unsubscribed_streamers()
     for subscription_id in subscriptions:
         await twitch.unsubscribe_event(subscription_id)
 
-    message_text = f"Notification\nBot leaved from channel '{event.chat.title}'"
-    await bot.send_message(chat_id=owner_id, text=message_text)
+    message_text = f"Notification\nBot leaved from channel '{chat_title}'"
+    with suppress(TelegramBadRequest):
+        await bot.send_message(chat_id=user_id, text=message_text)
 
 
 @router.message(Command("info"))

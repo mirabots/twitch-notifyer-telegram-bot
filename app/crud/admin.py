@@ -10,11 +10,10 @@ async def get_all_chats() -> dict[int, list[int]]:
 
         result = {}
         for chat in db_chats:
-            if chat.owner_id not in result:
-                result[chat.owner_id] = []
-            if chat.id != chat.owner_id:
-                result[chat.owner_id].append(chat.id)
-
+            if chat.user_id not in result:
+                result[chat.user_id] = []
+            if chat.id != chat.user_id:
+                result[chat.user_id].append(chat.id)
         return result
 
 

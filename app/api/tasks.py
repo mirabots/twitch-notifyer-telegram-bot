@@ -91,8 +91,10 @@ async def revoke_subscriptions(event: dict) -> None:
         logger.error("Streamer not in db")
         return
 
-    owners = await crud_subs.get_subscribed_owners(streamer_id)
-    logger.info(f"Chats: {owners}")
+    users = await crud_subs.get_subscribed_users(streamer_id)
+    logger.info(
+        f"Revoke subscription for {streamer_name_db}({streamer_id}). Chats: {users}"
+    )
 
     await crud_subs.remove_streamer(streamer_id)
     await crud_subs.remove_streamer_subscriptions(streamer_id)
@@ -105,7 +107,7 @@ async def revoke_subscriptions(event: dict) -> None:
         reason,
     )
     message_text, message_entities = message.render()
-    for owner in owners:
+    for user in users:
         await bot.send_message(
-            chat_id=owner, text=message_text, entities=message_entities
+            chat_id=user, text=message_text, entities=message_entities
         )

@@ -129,10 +129,10 @@ class ConfigManager:
                 no_secrets.append(f"{self.ENV}/db")
 
         # owner
-        owner_data = self.secrets_data.get(f"{self.ENV}/owner")
+        bot_owner_data = self.secrets_data.get(f"{self.ENV}/owner")
         try:
-            owner_data["login"]
-            owner_data["id"]
+            bot_owner_data["login"]
+            bot_owner_data["id"]
         except Exception:
             no_secrets.append(f"{self.ENV}/owner")
 
@@ -172,9 +172,9 @@ class ConfigManager:
             self.DB_CONNECTION_STRING = db_data["connection string"]
 
         # owner
-        owner_data = self.secrets_data.get(f"{self.ENV}/owner")
-        self.OWNER_LOGIN = owner_data["login"]
-        self.OWNER_ID = owner_data["id"]
+        bot_owner_data = self.secrets_data.get(f"{self.ENV}/owner")
+        self.BOT_OWNER_LOGIN = bot_owner_data["login"]
+        self.BOT_OWNER_ID = bot_owner_data["id"]
 
         # domain
         domain_data = self.secrets_data.get(f"{self.ENV}/domain")

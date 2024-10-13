@@ -10,7 +10,7 @@ class Chats(Base):
     __tablename__ = "chats"
 
     id: Mapped[int] = mapped_column(BIGINT, primary_key=True, autoincrement=False)
-    owner_id: Mapped[int] = mapped_column(BIGINT, nullable=False)
+    user_id: Mapped[int] = mapped_column(BIGINT, nullable=False)
 
 
 class Streamers(Base):
