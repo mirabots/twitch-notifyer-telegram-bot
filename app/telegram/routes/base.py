@@ -148,17 +148,16 @@ async def info_handler(message: types.Message, bot: Bot):
     info = formatting.as_marked_section(
         formatting.Bold("Here is simple instruction how to use bot:"),
         formatting.Text(
-            "If you want to recieve notifications in channels, first of all, you need to add bot to the channel with only admin ",
+            "If you want to recieve notifications in channels, first of all, you need to add bot to the channel ",
+            formatting.TextLink("using this link", url=bot_channel_link),
+            " (with only admin ",
             formatting.Italic("POST POSTS"),
-            " permission ",
-            formatting.TextLink("or use this link", url=bot_channel_link),
-            ".",
+            " permission).",
         ),
         "Secondly, you need to add streamer subscription to chat/channel, using /subscribe command. That's all.",
         "Other commands (managing chats and streamers, changing notification text) can be found in command-menu near text-input.",
         marker="● ",
     )
-
     with suppress(TelegramBadRequest):
         await message.answer(**info.as_kwargs())
 

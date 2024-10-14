@@ -32,10 +32,12 @@ async def add_channel_handler(message: types.Message, bot: Bot):
     bot_channel_link = (
         f"tg://resolve?domain={bot_name}&startchannel&admin=post_messages"
     )
-    message_text = formatting.TextLink(
-        "Use this link to select channel", url=bot_channel_link
+    message_text = formatting.Text(
+        formatting.TextLink("Use this link", url=bot_channel_link),
+        " to select channel and add bot (with only admin ",
+        formatting.Italic("POST POSTS"),
+        " permission).",
     )
-
     with suppress(TelegramBadRequest):
         await message.answer(**message_text.as_kwargs())
 
