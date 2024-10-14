@@ -20,6 +20,14 @@ async def chat_exists(chat_id: int) -> bool:
         return False
 
 
+async def get_chat_owner(chat_id: int) -> int:
+    async with async_session() as session, session.begin():
+        db_chat = await session.scalar(select(Chats).where(Chats.id == chat_id))
+        if not db_chat:
+            return None
+        return db_chat.user_id
+
+
 async def add_chat(chat_id: int, user_id: int) -> bool:
     async with async_session() as session, session.begin():
         db_chat = await session.scalar(select(Chats).where(Chats.id == chat_id))

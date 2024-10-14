@@ -52,23 +52,23 @@ async def start_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
     chat_title = event.chat.title
     user_id = event.from_user.id
     user_name = event.from_user.username
+    user_channel_status = (await bot.get_chat_member(chat_id, user_id)).status
 
     if (
         not (await crud_chats.user_exists(user_id))
         or user_name not in cfg.TELEGRAM_ALLOWED
+        or user_channel_status != ChatMemberStatus.CREATOR
     ):
-        return
-    sender_info = await bot.get_chat_member(chat_id, user_id)
-    if sender_info.status != ChatMemberStatus.CREATOR:
         return
 
     logger.info(f"Start channel: {user_id=} {user_name=} {chat_id=} {chat_title=}")
 
     chat_added = await crud_chats.add_chat(chat_id, user_id)
-    if chat_added:
-        message_text = f"Notification\nChannel '{chat_title}' added"
-        with suppress(TelegramBadRequest):
-            await bot.send_message(chat_id=user_id, text=message_text)
+    message_text = f"Notification\nChannel '{chat_title}' added"
+    if not chat_added:
+        message_text = f"Notification\nChannel '{chat_title}' exists"
+    with suppress(TelegramBadRequest):
+        await bot.send_message(chat_id=user_id, text=message_text)
 
 
 @router.message(Command("stop"))
@@ -112,18 +112,19 @@ async def stop_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
     chat_title = event.chat.title
     user_id = event.from_user.id
     user_name = event.from_user.username
+    user_channel_status = (await bot.get_chat_member(chat_id, user_id)).status
 
     if not (await crud_chats.chat_exists(chat_id)):
         return
     if (
         not (await crud_chats.user_exists(user_id))
         or user_name not in cfg.TELEGRAM_ALLOWED
+        or user_channel_status != ChatMemberStatus.CREATOR
     ):
-        message_text = (
-            f"Notification\nBot leaved from channel '{chat_title}' by '{user_name}'"
-        )
+        chat_owner = await crud_chats.get_chat_owner(chat_id)
+        message_text = f"Notification\nBot leaved from channel '{chat_title}' by '{user_name}'\n(but not deleted from bot)"
         with suppress(TelegramBadRequest):
-            await bot.send_message(chat_id=user_id, text=message_text)
+            await bot.send_message(chat_id=chat_owner, text=message_text)
         return
 
     logger.info(f"Stop channel: {user_id=} {user_name=} {chat_id=} {chat_title=}")
