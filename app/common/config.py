@@ -46,11 +46,10 @@ class ConfigManager:
             self.logger.error(error)
             sys.exit(1)
 
-        no_secrets = self.check_secrets(get_db=True)
+        no_secrets = self.apply_secrets(get_db=True)
         if no_secrets:
             self.logger.error(f"No secrets found: {no_secrets}")
             sys.exit(1)
-        self.apply_secrets(get_db=True)
         self.logger.info("Secrets were loaded")
 
     def load_creds_sync(self) -> None:
@@ -117,81 +116,54 @@ class ConfigManager:
         except Exception:
             return "Error getting secrets from response"
 
-    def check_secrets(self, get_db: bool) -> list[str]:
+    def apply_secrets(self, get_db: bool) -> list[str]:
         no_secrets = []
 
         # database: need to get only at startup
         if get_db:
             db_data = self.secrets_data.get(f"{self.ENV}/db")
             try:
-                db_data["connection string"]
+                self.DB_CONNECTION_STRING = db_data["connection string"]
             except Exception:
                 no_secrets.append(f"{self.ENV}/db")
 
         # owner
         bot_owner_data = self.secrets_data.get(f"{self.ENV}/owner")
         try:
-            bot_owner_data["login"]
-            bot_owner_data["id"]
+            self.BOT_OWNER_LOGIN = bot_owner_data["login"]
+            self.BOT_OWNER_ID = bot_owner_data["id"]
         except Exception:
             no_secrets.append(f"{self.ENV}/owner")
 
         # domain
         domain_data = self.secrets_data.get(f"{self.ENV}/domain")
         try:
-            domain_data["domain"]
+            self.DOMAIN = domain_data["domain"]
         except Exception:
             no_secrets.append(f"{self.ENV}/domain")
 
         # twitch
         twitch_data = self.secrets_data.get(f"{self.ENV}/twitch")
         try:
-            twitch_data["client_id"]
-            twitch_data["client_secret"]
-            twitch_data["subscription_secret"]
+            self.TWITCH_CLIENT_ID = twitch_data["client_id"]
+            self.TWITCH_CLIENT_SECRET = twitch_data["client_secret"]
+            self.TWITCH_SUBSCRIPTION_SECRET = twitch_data["subscription_secret"]
+            self.TWITCH_BEARER = "NONE"
         except Exception:
             no_secrets.append(f"{self.ENV}/twitch")
 
         # telegram
         telegram_data = self.secrets_data.get(f"{self.ENV}/telegram")
         try:
-            telegram_data["token"]
-            telegram_data["secret"]
-            ALLOWED = telegram_data["allowed"]
-            if not isinstance(ALLOWED, list):
+            self.TELEGRAM_TOKEN = telegram_data["token"]
+            self.TELEGRAM_SECRET = telegram_data["secret"]
+            self.TELEGRAM_ALLOWED = telegram_data["allowed"]
+            if not isinstance(self.TELEGRAM_ALLOWED, list):
                 raise
         except Exception:
             no_secrets.append(f"{self.ENV}/telegram")
 
         return no_secrets
-
-    def apply_secrets(self, get_db: bool) -> None:
-        # database: need to get only at startup
-        if get_db:
-            db_data = self.secrets_data.get(f"{self.ENV}/db")
-            self.DB_CONNECTION_STRING = db_data["connection string"]
-
-        # owner
-        bot_owner_data = self.secrets_data.get(f"{self.ENV}/owner")
-        self.BOT_OWNER_LOGIN = bot_owner_data["login"]
-        self.BOT_OWNER_ID = bot_owner_data["id"]
-
-        # domain
-        domain_data = self.secrets_data.get(f"{self.ENV}/domain")
-        self.DOMAIN = domain_data["domain"]
-
-        # twitch
-        twitch_data = self.secrets_data.get(f"{self.ENV}/twitch")
-        self.TWITCH_CLIENT_ID = twitch_data["client_id"]
-        self.TWITCH_CLIENT_SECRET = twitch_data["client_secret"]
-        self.TWITCH_SUBSCRIPTION_SECRET = twitch_data["subscription_secret"]
-        self.TWITCH_BEARER = "NONE"
-
-        # telegram
-        telegram_data = self.secrets_data.get(f"{self.ENV}/telegram")
-        self.TELEGRAM_TOKEN = telegram_data["token"]
-        self.TELEGRAM_SECRET = telegram_data["secret"]
-        self.TELEGRAM_ALLOWED = telegram_data["allowed"]
 
 
 cfg = ConfigManager()

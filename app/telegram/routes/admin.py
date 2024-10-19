@@ -83,14 +83,12 @@ async def secrets_reload_handler(message: types.Message):
             await message.answer(text=error)
             return
 
-    no_secrets = cfg.check_secrets(get_db=False)
+    no_secrets = cfg.apply_secrets(get_db=False)
     if no_secrets:
         logger.error(f"No secrets found: {no_secrets}")
         with suppress(TelegramBadRequest):
             await message.answer(text=f"No secrets found:\n{str(no_secrets)}")
             return
-
-    cfg.apply_secrets(get_db=False)
     logger.info("Secrets were reloaded")
     with suppress(TelegramBadRequest):
         await message.answer(text="Reloaded")
