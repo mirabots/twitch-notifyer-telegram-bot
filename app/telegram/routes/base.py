@@ -179,6 +179,8 @@ async def abort_handler(
         action_text = "Unsubscribe"
     if action == "tmplt":
         action_text = "Changing template"
+    if action == "pctr":
+        action_text = "Changing picture mode"
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(

@@ -6,6 +6,7 @@ from app.telegram.utils.callbacks import (
     CallbackChooseChat,
     CallbackChooseStreamer,
     CallbackDefault,
+    CallbackPicture,
 )
 
 
@@ -54,4 +55,11 @@ def get_keyboard_default(
             action=action, streamer_id=streamer_id, chat_id=chat_id
         ),
     )
+    return keyboard
+
+
+def get_keyboard_picture(action: str, choices: list[str]) -> InlineKeyboardBuilder:
+    keyboard = InlineKeyboardBuilder()
+    for choice in choices:
+        keyboard.button(text=choice, callback_data=CallbackPicture(action=action))
     return keyboard

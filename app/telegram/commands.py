@@ -10,6 +10,7 @@ COMMANDS = [
         command="subscribe", description="Subscribe to stream notification"
     ),
     types.BotCommand(command="template", description="Change notification template"),
+    types.BotCommand(command="picture", description="Change notification picture mode"),
     types.BotCommand(
         command="unsubscribe", description="Unsubscribe from stream notification"
     ),

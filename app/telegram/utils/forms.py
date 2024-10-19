@@ -7,3 +7,8 @@ class FormSubscribe(StatesGroup):
 
 class FormChangeTemplate(StatesGroup):
     template_text = State()
+
+
+class FormChangePictureMode(StatesGroup):
+    picture_mode = State()
+    picture_input = State()

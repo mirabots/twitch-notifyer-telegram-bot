@@ -54,12 +54,7 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
     if stream_details:
         stream_details += "\n"
 
-    utc_now = datetime.now(tz=timezone.utc).strftime("%Y_%m_%d_%H_%M_%S")
-    stream_picture = types.URLInputFile(
-        stream_info["thumbnail_url"].format(width="1920", height="1080"),
-        filename=f"{streamer_login}_{utc_now}.jpg",
-        bot=bot,
-    )
+    stream_picture = None
 
     chats = await crud_subs.get_subscribed_chats(streamer_id)
     logger.info(f"Chats: {[chat['id'] for chat in chats]}")
@@ -74,12 +69,31 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
             Bold(f"twitch.tv/{streamer_login}"),
         )
         message_text, message_entities = message.render()
-        await bot.send_photo(
-            chat_id=chat["id"],
-            photo=stream_picture,
-            caption=message_text,
-            caption_entities=message_entities,
-        )
+
+        if chat["picture_mode"] == "Disabled":
+            await bot.send_message(
+                chat_id=chat["id"],
+                text=message_text,
+                entities=message_entities,
+                link_preview_options=types.LinkPreviewOptions(is_disabled=True),
+            )
+        elif chat["picture_mode"] == "Stream start screenshot":
+            if stream_picture == None:
+                utc_now = datetime.now(tz=timezone.utc).strftime("%Y_%m_%d_%H_%M_%S")
+                stream_picture = types.URLInputFile(
+                    stream_info["thumbnail_url"].format(width="1920", height="1080"),
+                    filename=f"{streamer_login}_{utc_now}.jpg",
+                    bot=bot,
+                )
+
+            await bot.send_photo(
+                chat_id=chat["id"],
+                photo=stream_picture,
+                caption=message_text,
+                caption_entities=message_entities,
+            )
+        else:
+            pass
 
 
 async def revoke_subscriptions(event: dict) -> None:

@@ -29,6 +29,13 @@ def upgrade() -> None:
         schema="tntb",
     )
     conn.execute(sa.text("UPDATE tntb.chats SET user_id=owner_id;"))
+    op.alter_column(
+        "chats",
+        "user_id",
+        existing_type=sa.BIGINT(),
+        nullable=False,
+        schema="tntb",
+    )
     op.drop_column("chats", "owner_id", schema="tntb")
 
     op.add_column(
@@ -53,10 +60,17 @@ def downgrade() -> None:
 
     op.add_column(
         "chats",
-        sa.Column("owner_id", sa.BIGINT(), nullable=False),
+        sa.Column("owner_id", sa.BIGINT(), nullable=True),
         schema="tntb",
     )
     conn.execute(sa.text("UPDATE tntb.chats SET owner_id=user_id;"))
+    op.alter_column(
+        "chats",
+        "owner_id",
+        existing_type=sa.BIGINT(),
+        nullable=False,
+        schema="tntb",
+    )
     op.drop_column("chats", "user_id", schema="tntb")
 
     op.drop_column("streamers", "name", schema="tntb")
