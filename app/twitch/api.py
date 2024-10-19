@@ -1,23 +1,37 @@
+from datetime import datetime, timezone
+
 import httpx
 
 from app.common.config import cfg
+from app.common.utils import get_logger, levelDEBUG, levelINFO
+from app.telegram.bot import bot
+
+logger = get_logger(levelDEBUG if cfg.ENV == "dev" else levelINFO)
 
 
 async def _auth() -> None:
-    async with httpx.AsyncClient() as ac:
-        answer = await ac.post(
-            "https://id.twitch.tv/oauth2/token",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data={
-                "client_id": cfg.TWITCH_CLIENT_ID,
-                "client_secret": cfg.TWITCH_CLIENT_SECRET,
-                "grant_type": "client_credentials",
-            },
-        )
-        if answer.status_code != 200:
-            print("auth error")
-            return
-        cfg.TWITCH_BEARER = answer.json()["access_token"]
+    try:
+        async with httpx.AsyncClient() as ac:
+            answer = await ac.post(
+                "https://id.twitch.tv/oauth2/token",
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                data={
+                    "client_id": cfg.TWITCH_CLIENT_ID,
+                    "client_secret": cfg.TWITCH_CLIENT_SECRET,
+                    "grant_type": "client_credentials",
+                },
+            )
+            if answer.status_code != 200:
+                raise Exception(f"Response: {answer.status_code}")
+            cfg.TWITCH_BEARER = answer.json()["access_token"]
+    except Exception as e:
+        logger.error(f"Twitch auth error {str(e)}")
+        if cfg.ENV != "dev":
+            datetime_utc_now = datetime.now(tz=timezone.utc).isoformat()
+            await bot.send_message(
+                chat_id=cfg.BOT_OWNER_ID,
+                text=f"ADMIN MESSAGE\nTWITCH AUTH FAILED at {datetime_utc_now}\n{str(e)}",
+            )
 
 
 async def _get_streamer_id(streamer_name: str) -> httpx.Response:
