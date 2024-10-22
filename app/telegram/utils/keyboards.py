@@ -5,8 +5,10 @@ from app.telegram.utils.callbacks import (
     CallbackAbort,
     CallbackChooseChat,
     CallbackChooseStreamer,
+    CallbackChooseUserRemove,
     CallbackDefault,
     CallbackPicture,
+    CallbackUsersAction,
 )
 
 
@@ -39,9 +41,9 @@ def get_keyboard_streamers(
     return keyboard
 
 
-def get_keyboard_abort(action: str) -> InlineKeyboardBuilder:
+def get_keyboard_abort(action: str, name: str = "Abort") -> InlineKeyboardBuilder:
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(text="Abort", callback_data=CallbackAbort(action=action))
+    keyboard.button(text=name, callback_data=CallbackAbort(action=action))
     return keyboard
 
 
@@ -62,4 +64,26 @@ def get_keyboard_picture(action: str, choices: list[str]) -> InlineKeyboardBuild
     keyboard = InlineKeyboardBuilder()
     for choice in choices:
         keyboard.button(text=choice, callback_data=CallbackPicture(action=action))
+    return keyboard
+
+
+def get_keyboard_users_actions() -> InlineKeyboardBuilder:
+    keyboard = InlineKeyboardBuilder()
+    for action in ("Add", "Remove"):
+        keyboard.button(text=action, callback_data=CallbackUsersAction(action=action))
+    return keyboard
+
+
+def get_keyboard_users(users: dict[str, int | None]) -> InlineKeyboardBuilder:
+    keyboard = InlineKeyboardBuilder()
+    user_num = 0
+    for user_name, user_id in users.items():
+        keyboard.button(
+            text=user_name,
+            callback_data=CallbackChooseUserRemove(
+                user_num=user_num,
+                user_id=user_id,
+            ),
+        )
+        user_num += 1
     return keyboard

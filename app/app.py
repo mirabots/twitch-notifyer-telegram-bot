@@ -7,7 +7,6 @@ from litestar.status_codes import HTTP_500_INTERNAL_SERVER_ERROR
 
 from app.api.webhooks import router as litestar_router
 from app.common.config import cfg
-from app.common.utils import get_logger, get_logging_config, levelDEBUG, levelINFO
 from app.db.common import _engine, check_db
 from app.telegram.bot import bot, dp
 from app.telegram.commands import COMMANDS
@@ -20,13 +19,10 @@ from app.telegram.routes.admin import router as telegram_router_admin
 from app.telegram.routes.base import router as telegram_router_base
 from app.telegram.routes.subscriptions import router as telegram_router_subscriptions
 
-logger = get_logger(levelDEBUG if cfg.ENV == "dev" else levelINFO)
-logging_config = get_logging_config(levelDEBUG if cfg.ENV == "dev" else levelINFO)
-
 
 @asynccontextmanager
 async def lifespan_function(app: Litestar) -> AsyncGenerator[None, None]:
-    await check_db(logger)
+    await check_db()
 
     # webhook_info = await bot.get_webhook_info()
     # if webhook_info.url != f"https://{cfg.DOMAIN}/webhooks/telegram":
@@ -58,7 +54,7 @@ async def lifespan_function(app: Litestar) -> AsyncGenerator[None, None]:
 
 
 def internal_server_error_handler(_: Request, exc: Exception) -> Response:
-    logger.error(exc)
+    cfg.logger.error(exc)
     traceback.print_exception(exc)
     return Response(
         status_code=500,
@@ -69,7 +65,7 @@ def internal_server_error_handler(_: Request, exc: Exception) -> Response:
 app = Litestar(
     [litestar_router],
     lifespan=[lifespan_function],
-    logging_config=logging_config,
+    logging_config=cfg.logging_config,
     # debug=True,
     exception_handlers={
         HTTP_500_INTERNAL_SERVER_ERROR: internal_server_error_handler,

@@ -31,3 +31,12 @@ class CallbackDefault(CallbackData, prefix="dflt"):
 
 class CallbackPicture(CallbackData, prefix="pctr"):
     action: str
+
+
+class CallbackUsersAction(CallbackData, prefix="usrsact"):
+    action: str
+
+
+class CallbackChooseUserRemove(CallbackData, prefix="usrr"):
+    user_id: int | None
+    user_num: int

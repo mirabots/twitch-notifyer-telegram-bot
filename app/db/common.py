@@ -1,4 +1,3 @@
-import logging
 import sys
 from typing import Any
 
@@ -11,13 +10,13 @@ _engine = create_async_engine(cfg.DB_CONNECTION_STRING)
 async_session = async_sessionmaker(_engine, expire_on_commit=False)
 
 
-async def check_db(logger: logging.Logger) -> None:
+async def check_db() -> None:
     try:
         async with async_session() as session:
             await session.execute(text("SELECT 1;"))
-            logger.info("Successfully connected to database")
+            cfg.logger.info("Successfully connected to database")
     except Exception as e:
-        logger.error(f"Failed to connect to database: {str(e)}")
+        cfg.logger.error(f"Failed to connect to database: {str(e)}")
         sys.exit(1)
 
 

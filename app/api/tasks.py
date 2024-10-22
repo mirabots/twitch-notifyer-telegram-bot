@@ -5,12 +5,9 @@ from aiogram import types
 from aiogram.utils.formatting import Bold, Text
 
 from app.common.config import cfg
-from app.common.utils import get_logger, levelDEBUG, levelINFO
 from app.crud import subscriptions as crud_subs
 from app.telegram.bot import bot
 from app.twitch import functions as twitch
-
-logger = get_logger(levelDEBUG if cfg.ENV == "dev" else levelINFO)
 
 
 async def send_notifications_to_chats(event: dict, message_id: str) -> None:
@@ -18,25 +15,25 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
     streamer_login = event.get("broadcaster_user_login", "")
     streamer_name = event.get("broadcaster_user_name", "")
 
-    logger.info(f"Notification ({message_id}): {streamer_login} ({streamer_id})")
+    cfg.logger.info(f"Notification ({message_id}): {streamer_login} ({streamer_id})")
 
     streamer_name_db = await crud_subs.check_streamer(streamer_id)
     if streamer_name_db == None:
-        logger.error("Streamer not in db")
+        cfg.logger.error("Streamer not in db")
         return
     elif streamer_name_db != streamer_name:
         await crud_subs.update_streamer_name(streamer_id, streamer_name)
 
     if await crud_subs.check_duplicate_event_message(streamer_id, message_id):
-        logger.error("Duplicated event message")
+        cfg.logger.error("Duplicated event message")
         return
 
     stream_info = await twitch.get_stream_info(streamer_id)
     if not stream_info:
-        logger.warning("No stream info from Twitch API")
+        cfg.logger.warning("No stream info from Twitch API")
         stream_info = await twitch.get_channel_info(streamer_id)
         if not stream_info:
-            logger.warning("No channel info from Twitch API")
+            cfg.logger.warning("No channel info from Twitch API")
         stream_info["thumbnail_url"] = (
             "https://static-cdn.jtvnw.net/previews-ttv/live_user_"
             + streamer_login
@@ -57,7 +54,7 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
     stream_picture = None
 
     chats = await crud_subs.get_subscribed_chats(streamer_id)
-    logger.info(f"Chats: {[chat['id'] for chat in chats]}")
+    cfg.logger.info(f"Chats: {[chat['id'] for chat in chats]}")
 
     for chat in chats:
         template = Template(chat["template"] or "$streamer_name started stream")
@@ -102,11 +99,11 @@ async def revoke_subscriptions(event: dict) -> None:
 
     streamer_name_db = await crud_subs.check_streamer(streamer_id)
     if streamer_name_db == None:
-        logger.error("Streamer not in db")
+        cfg.logger.error("Streamer not in db")
         return
 
     users = await crud_subs.get_subscribed_users(streamer_id)
-    logger.info(
+    cfg.logger.info(
         f"Revoke subscription for {streamer_name_db}({streamer_id}). Chats: {users}"
     )
 

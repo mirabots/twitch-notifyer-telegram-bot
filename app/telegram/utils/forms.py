@@ -12,3 +12,7 @@ class FormChangeTemplate(StatesGroup):
 class FormChangePictureMode(StatesGroup):
     picture_mode = State()
     picture_input = State()
+
+
+class FormUserAdd(StatesGroup):
+    user_name = State()

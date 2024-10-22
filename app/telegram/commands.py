@@ -20,7 +20,7 @@ COMMANDS = [
 
 
 COMMANDS_ADMIN = {
-    "/users": "List all users with their channels",
+    "/users": "List and manage users (+channels)",
     "/streamers": "List subscribed streamers",
     "/costs": "Twitch API costs",
     "/pause": "(Un)Pause bot",

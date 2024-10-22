@@ -2,12 +2,10 @@ import sys
 
 import uvicorn
 
-from app.common.utils import get_args, get_logger, levelDEBUG, levelINFO
+from app.common.utils import get_args
 
 if __name__ == "__main__":
     args = get_args()
-    logger = get_logger(levelDEBUG if args.env == "dev" else levelINFO)
-    logger.info(f"{args.env} running {args.host}:{args.port}")
 
     log_config = uvicorn.config.LOGGING_CONFIG
     log_config["formatters"]["default"][
@@ -29,5 +27,5 @@ if __name__ == "__main__":
             reload=False,
         )
     except KeyboardInterrupt:
-        logger.info("KEYBOARD INTERRUPT")
+        print("KEYBOARD INTERRUPT")
         sys.exit(1)

@@ -9,7 +9,7 @@ from aiofile import async_open
 from app.common.utils import (
     disable_unnecessary_loggers,
     get_args,
-    get_logger,
+    get_logging_config,
     levelDEBUG,
     levelINFO,
 )
@@ -27,7 +27,10 @@ class ConfigManager:
         if self.ENV != "dev":
             disable_unnecessary_loggers()
 
-        self.logger = get_logger(levelDEBUG if self.ENV == "dev" else levelINFO)
+        self.logging_config = get_logging_config(
+            levelDEBUG if self.ENV == "dev" else levelINFO
+        )
+        self.logger = self.logging_config.configure()()
 
         self.load_creds_sync()
         error = self.get_creds()
@@ -157,13 +160,38 @@ class ConfigManager:
         try:
             self.TELEGRAM_TOKEN = telegram_data["token"]
             self.TELEGRAM_SECRET = telegram_data["secret"]
-            self.TELEGRAM_ALLOWED = telegram_data["allowed"]
-            if not isinstance(self.TELEGRAM_ALLOWED, list):
-                raise
+            self.TELEGRAM_ALLOWED = [user.lower() for user in telegram_data["allowed"]]
+            # telegram_data["limit_default"] = 50
+            # self.TELEGRAM_LIMIT_DEFAULT = telegram_data["limit_default"]
+            # telegram_data["limites"] = {"mirakzen": "-"}
+            # self.TELEGRAM_LIMITES = telegram_data["limites"]
         except Exception:
             no_secrets.append(f"{self.ENV}/telegram")
 
         return no_secrets
+
+    async def update_telegram_allowed(self, user: str, action: str) -> str:
+        try:
+            if action == "add":
+                self.TELEGRAM_ALLOWED.append(user)
+            elif action == "remove":
+                self.TELEGRAM_ALLOWED.remove(user)
+            self.secrets_data[f"{self.ENV}/telegram"]["allowed"] = self.TELEGRAM_ALLOWED
+        except Exception as e:
+            return f"Error updating local secrets data - {e}"
+
+        try:
+            async with httpx.AsyncClient(
+                base_url=self.SECRETS_DOMAIN,
+                headers={self.SECRETS_HEADER: self.SECRETS_TOKEN},
+            ) as ac:
+                data = {"data": self.secrets_data[f"{self.ENV}/telegram"]}
+                response = await ac.put(f"/api/secrets/{self.ENV}/telegram", json=data)
+                if response.status_code != 200:
+                    return f"Error updating data in secrets - {response.status_code}"
+                return ""
+        except Exception as e:
+            return f"Error updating data in secrets - {e}"
 
 
 cfg = ConfigManager()

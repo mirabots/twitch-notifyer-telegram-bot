@@ -3,10 +3,7 @@ from datetime import datetime, timezone
 import httpx
 
 from app.common.config import cfg
-from app.common.utils import get_logger, levelDEBUG, levelINFO
 from app.telegram.bot import bot
-
-logger = get_logger(levelDEBUG if cfg.ENV == "dev" else levelINFO)
 
 
 async def _auth() -> None:
@@ -25,7 +22,7 @@ async def _auth() -> None:
                 raise Exception(f"Response: {answer.status_code}")
             cfg.TWITCH_BEARER = answer.json()["access_token"]
     except Exception as e:
-        logger.error(f"Twitch auth error {str(e)}")
+        cfg.logger.error(f"Twitch auth error {str(e)}")
         if cfg.ENV != "dev":
             datetime_utc_now = datetime.now(tz=timezone.utc).isoformat()
             await bot.send_message(

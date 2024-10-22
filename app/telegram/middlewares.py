@@ -70,7 +70,10 @@ class AdminMiddleware(BaseMiddleware):
         user_name = event.from_user.username
 
         if command in admin_commands:
-            if user_id == cfg.BOT_OWNER_ID and user_name == cfg.BOT_OWNER_LOGIN:
+            if (
+                user_id == cfg.BOT_OWNER_ID
+                and user_name.lower() == cfg.BOT_OWNER_LOGIN.lower()
+            ):
                 return await handler(event, data)
             else:
                 return

@@ -13,14 +13,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils import formatting
 
 from app.common.config import cfg
-from app.common.utils import get_logger, levelDEBUG, levelINFO
 from app.crud import chats as crud_chats
 from app.crud import subscriptions as crud_subs
 from app.telegram.utils.callbacks import CallbackAbort
 from app.twitch import functions as twitch
 
 router = Router()
-logger = get_logger(levelDEBUG if cfg.ENV == "dev" else levelINFO)
 
 
 @router.message(Command("start"))
@@ -29,7 +27,7 @@ async def start_handler(message: types.Message):
     user_id = message.from_user.id
     user_name = message.from_user.username
 
-    logger.info(f"Start user: {user_id=} {user_name=} {chat_id=}")
+    cfg.logger.info(f"Start user: {user_id=} {user_name=} {chat_id=}")
 
     chat_added = await crud_chats.add_chat(chat_id, user_id)
     message_text = (
@@ -61,7 +59,7 @@ async def start_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
     ):
         return
 
-    logger.info(f"Start channel: {user_id=} {user_name=} {chat_id=} {chat_title=}")
+    cfg.logger.info(f"Start channel: {user_id=} {user_name=} {chat_id=} {chat_title=}")
 
     chat_added = await crud_chats.add_chat(chat_id, user_id)
     message_text = f"Notification\nChannel '{chat_title}' added"
@@ -77,7 +75,7 @@ async def stop_handler(message: types.Message, bot: Bot):
     user_id = message.from_user.id
     user_name = message.from_user.username
 
-    logger.info(f"Stop user: {user_id=} {user_name=}")
+    cfg.logger.info(f"Stop user: {user_id=} {user_name=}")
 
     user_chats = await crud_chats.get_user_chats(user_id)
     if not user_chats:
@@ -127,7 +125,7 @@ async def stop_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
             await bot.send_message(chat_id=chat_owner, text=message_text)
         return
 
-    logger.info(f"Stop channel: {user_id=} {user_name=} {chat_id=} {chat_title=}")
+    cfg.logger.info(f"Stop channel: {user_id=} {user_name=} {chat_id=} {chat_title=}")
 
     await crud_chats.remove_chats([chat_id])
     subscriptions = await crud_subs.remove_unsubscribed_streamers()
@@ -181,6 +179,14 @@ async def abort_handler(
         action_text = "Changing template"
     if action == "pctr":
         action_text = "Changing picture mode"
+    if action == "usrs":
+        with suppress(TelegramBadRequest):
+            await callback.message.edit_reply_markup(reply_markup=None)
+            return
+    if action == "usra":
+        action_text = "Adding user"
+    if action == "usrr":
+        action_text = "Removing user"
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(
