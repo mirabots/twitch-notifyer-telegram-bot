@@ -37,6 +37,11 @@ class CallbackUsersAction(CallbackData, prefix="usrsact"):
     action: str
 
 
-class CallbackChooseUserRemove(CallbackData, prefix="usrr"):
+class CallbackChooseUser(CallbackData, prefix="usrr"):
+    action: str
     user_id: int | None
     user_num: int
+
+
+class CallbackLimitDefault(CallbackData, prefix="usrsld"):
+    pass

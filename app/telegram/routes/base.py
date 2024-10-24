@@ -187,6 +187,17 @@ async def abort_handler(
         action_text = "Adding user"
     if action == "usrr":
         action_text = "Removing user"
+    if action == "usrsl":
+        with suppress(TelegramBadRequest):
+            await callback.message.edit_text(
+                text=f"Current default limit: {cfg.TELEGRAM_LIMIT_DEFAULT}",
+                reply_markup=None,
+            )
+            return
+    if action == "usrsld":
+        action_text = "Changing default limit"
+    if action == "usrl":
+        action_text = "Changing user's limit"
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(

@@ -5,8 +5,9 @@ from app.telegram.utils.callbacks import (
     CallbackAbort,
     CallbackChooseChat,
     CallbackChooseStreamer,
-    CallbackChooseUserRemove,
+    CallbackChooseUser,
     CallbackDefault,
+    CallbackLimitDefault,
     CallbackPicture,
     CallbackUsersAction,
 )
@@ -74,16 +75,25 @@ def get_keyboard_users_actions() -> InlineKeyboardBuilder:
     return keyboard
 
 
-def get_keyboard_users(users: dict[str, int | None]) -> InlineKeyboardBuilder:
+def get_keyboard_users(
+    users: dict[str, int | None], action: str
+) -> InlineKeyboardBuilder:
     keyboard = InlineKeyboardBuilder()
     user_num = 0
     for user_name, user_id in users.items():
         keyboard.button(
             text=user_name,
-            callback_data=CallbackChooseUserRemove(
+            callback_data=CallbackChooseUser(
+                action=action,
                 user_num=user_num,
                 user_id=user_id,
             ),
         )
         user_num += 1
+    return keyboard
+
+
+def get_keyboard_limit_default(name: str) -> InlineKeyboardBuilder:
+    keyboard = InlineKeyboardBuilder()
+    keyboard.button(text=name, callback_data=CallbackLimitDefault())
     return keyboard

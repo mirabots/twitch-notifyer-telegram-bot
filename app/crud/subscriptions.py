@@ -1,4 +1,4 @@
-from sqlalchemy import delete, insert, join, select, update
+from sqlalchemy import delete, func, insert, join, select, update
 
 from app.db.common import async_session
 from app.db.models import Chats, Streamers, Subscriptions
@@ -195,3 +195,17 @@ async def change_picture_mode(
             )
             .values(picture_mode=picture_mode)
         )
+
+
+async def get_user_subscription_count(user_id: int) -> tuple[int, int]:
+    async with async_session() as session, session.begin():
+        (subs_count,) = (
+            await session.execute(
+                select(func.count("*"))
+                .select_from(
+                    join(Subscriptions, Chats, Subscriptions.chat_id == Chats.id)
+                )
+                .where(Chats.user_id == user_id)
+            )
+        ).fetchone()
+        return subs_count

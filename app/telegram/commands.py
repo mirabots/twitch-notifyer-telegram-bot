@@ -23,6 +23,7 @@ COMMANDS_ADMIN = {
     "/users": "List and manage users (+channels)",
     "/streamers": "List subscribed streamers",
     "/costs": "Twitch API costs",
+    "/limites": "User's limites",
     "/pause": "(Un)Pause bot",
     "/secrets_reload": "Reload secrets",
 }

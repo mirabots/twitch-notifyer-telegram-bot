@@ -6,6 +6,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils import formatting
 
+from app.common.config import cfg
 from app.crud import chats as crud_chats
 from app.crud import subscriptions as crud_subs
 from app.telegram.utils.callbacks import (
@@ -86,9 +87,25 @@ async def chats_handler(message: types.Message, bot: Bot):
     main_keyboard.adjust(3)
     abort_keyboard = get_keyboard_abort(action)
     main_keyboard.attach(abort_keyboard)
+    reply_markup = main_keyboard.as_markup()
+
+    subs_string = ""
+    message_string = "Choose chat/channel:"
+    if action in ("subs", "sub", "unsub"):
+        subs_count = await crud_subs.get_user_subscription_count(message.from_user.id)
+        subs_limit = cfg.TELEGRAM_LIMITES.get(
+            message.from_user.username.lower(), cfg.TELEGRAM_LIMIT_DEFAULT
+        )
+        subs_string = f"Subscriptions count: {subs_count}/{subs_limit}\n"
+
+        if action == "sub":
+            if subs_limit != "-" and subs_count >= subs_limit:
+                message_string = "You reached subscription limit!"
+                reply_markup = None
+
     with suppress(TelegramBadRequest):
         await message.answer(
-            text="Choose chat/channel:", reply_markup=main_keyboard.as_markup()
+            text=f"{subs_string}{message_string}", reply_markup=reply_markup
         )
 
 

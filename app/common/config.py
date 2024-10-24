@@ -1,4 +1,5 @@
 import sys
+from copy import copy
 from time import sleep
 
 import httpx
@@ -161,25 +162,14 @@ class ConfigManager:
             self.TELEGRAM_TOKEN = telegram_data["token"]
             self.TELEGRAM_SECRET = telegram_data["secret"]
             self.TELEGRAM_ALLOWED = [user.lower() for user in telegram_data["allowed"]]
-            # telegram_data["limit_default"] = 50
-            # self.TELEGRAM_LIMIT_DEFAULT = telegram_data["limit_default"]
-            # telegram_data["limites"] = {"mirakzen": "-"}
-            # self.TELEGRAM_LIMITES = telegram_data["limites"]
+            self.TELEGRAM_LIMIT_DEFAULT = telegram_data["limit_default"]
+            self.TELEGRAM_LIMITES = telegram_data["limites"]
         except Exception:
             no_secrets.append(f"{self.ENV}/telegram")
 
         return no_secrets
 
-    async def update_telegram_allowed(self, user: str, action: str) -> str:
-        try:
-            if action == "add":
-                self.TELEGRAM_ALLOWED.append(user)
-            elif action == "remove":
-                self.TELEGRAM_ALLOWED.remove(user)
-            self.secrets_data[f"{self.ENV}/telegram"]["allowed"] = self.TELEGRAM_ALLOWED
-        except Exception as e:
-            return f"Error updating local secrets data - {e}"
-
+    async def update_telegram_secrets(self) -> str:
         try:
             async with httpx.AsyncClient(
                 base_url=self.SECRETS_DOMAIN,
@@ -192,6 +182,62 @@ class ConfigManager:
                 return ""
         except Exception as e:
             return f"Error updating data in secrets - {e}"
+
+    async def update_telegram_allowed(self, user: str, action: str) -> str:
+        old_value = copy(self.TELEGRAM_ALLOWED)
+        try:
+            if action == "add":
+                self.TELEGRAM_ALLOWED.append(user)
+            elif action == "remove":
+                self.TELEGRAM_ALLOWED.remove(user)
+            self.secrets_data[f"{self.ENV}/telegram"]["allowed"] = self.TELEGRAM_ALLOWED
+        except Exception as e:
+            return f"Error updating local secrets data - {e}"
+
+        update_result = await self.update_telegram_secrets()
+        if update_result:
+            self.TELEGRAM_ALLOWED = old_value
+            self.secrets_data[f"{self.ENV}/telegram"]["allowed"] = old_value
+        return update_result
+
+    async def update_telegram_limit_default(self, value: int) -> str:
+        old_default_value = copy(self.TELEGRAM_LIMIT_DEFAULT)
+        old_limites_value = copy(self.TELEGRAM_LIMITES)
+        self.TELEGRAM_LIMIT_DEFAULT = value
+        self.secrets_data[f"{self.ENV}/telegram"]["limit_default"] = value
+        for user in self.TELEGRAM_LIMITES:
+            if self.TELEGRAM_LIMITES[user] == value:
+                del self.TELEGRAM_LIMITES[user]
+        self.secrets_data[f"{self.ENV}/telegram"]["limites"] = self.TELEGRAM_LIMITES
+
+        update_result = await self.update_telegram_secrets()
+        if update_result:
+            self.TELEGRAM_LIMIT_DEFAULT = old_default_value
+            self.secrets_data[f"{self.ENV}/telegram"][
+                "limit_default"
+            ] = old_default_value
+            self.TELEGRAM_LIMITES = old_limites_value
+            self.secrets_data[f"{self.ENV}/telegram"]["limites"] = old_limites_value
+        return update_result
+
+    async def update_telegram_user_limit(self, user_name: str, value: int | str) -> str:
+        old_value = copy(self.TELEGRAM_LIMITES)
+
+        if value == self.TELEGRAM_LIMIT_DEFAULT:
+            if user_name in self.TELEGRAM_LIMITES:
+                del self.TELEGRAM_LIMITES[user_name]
+                self.secrets_data[f"{self.ENV}/telegram"][
+                    "limites"
+                ] = self.TELEGRAM_LIMITES
+        else:
+            self.TELEGRAM_LIMITES[user_name] = value
+            self.secrets_data[f"{self.ENV}/telegram"]["limites"] = self.TELEGRAM_LIMITES
+
+        update_result = await self.update_telegram_secrets()
+        if update_result:
+            self.TELEGRAM_LIMITES = old_value
+            self.secrets_data[f"{self.ENV}/telegram"]["limites"] = old_value
+        return update_result
 
 
 cfg = ConfigManager()
