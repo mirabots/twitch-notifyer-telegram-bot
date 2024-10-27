@@ -19,7 +19,7 @@ from app.telegram.utils.callbacks import (
     CallbackUsersAction,
     get_choosed_callback_text,
 )
-from app.telegram.utils.forms import FormLimitDefault, FormUserLimit
+from app.telegram.utils.forms import FormLimitDefault, FormUserLimit, FromUserRename
 from app.telegram.utils.keyboards import (
     get_keyboard_abort,
     get_keyboard_limit_default,
@@ -95,7 +95,7 @@ async def users_handler(message: types.Message, bot: Bot):
 
     with suppress(TelegramBadRequest):
         main_keyboard = get_keyboard_users_actions()
-        main_keyboard.adjust(2)
+        main_keyboard.adjust(3)
         abort_keyboard = get_keyboard_abort("usrs", "End")
         main_keyboard.attach(abort_keyboard)
         await message.answer(text=message_text, reply_markup=main_keyboard.as_markup())
@@ -107,12 +107,73 @@ async def user_invite_handler(callback: types.CallbackQuery, bot: Bot):
         await callback.message.edit_reply_markup(reply_markup=None)
 
         bot_name = (await bot.me()).username
-        bot_join_link = f"t.me/{bot_name}?start={cfg.TELEGRAM_INVITE_CODE}"
+        bot_join_link = f"https://t.me/{bot_name}?start={cfg.TELEGRAM_INVITE_CODE}"
 
         await callback.message.answer(
             text=f"Use this link for join bot:\n{bot_join_link}",
             link_preview_options=types.LinkPreviewOptions(is_disabled=True),
         )
+
+
+@router.callback_query(CallbackUsersAction.filter(F.action == "Rename"))
+async def user_name_choose_handler(callback: types.CallbackQuery):
+    with suppress(TelegramBadRequest):
+        await callback.message.edit_reply_markup(reply_markup=None)
+
+        main_keyboard = get_keyboard_users(cfg.TELEGRAM_USERS, "usrsn")
+        main_keyboard.adjust(2)
+        abort_keyboard = get_keyboard_abort("usrn")
+        main_keyboard.attach(abort_keyboard)
+        await callback.message.answer(
+            text="Choose user to remane:",
+            reply_markup=main_keyboard.as_markup(),
+        )
+
+
+@router.callback_query(CallbackChooseUser.filter(F.action == "usrsn"))
+async def user_name_handler(
+    callback: types.CallbackQuery, callback_data: CallbackChooseUser, state: FSMContext
+):
+    user_name = get_choosed_callback_text(
+        callback.message.reply_markup.inline_keyboard, callback.data
+    )
+    user_id = callback_data.user_id
+    with suppress(TelegramBadRequest):
+        await callback.message.edit_text(
+            text=f"'{user_name}' choosen", reply_markup=None
+        )
+
+        abort_keyboard = get_keyboard_abort("usrn")
+        sended_message = await callback.message.answer(
+            text="Enter new user name:",
+            reply_markup=abort_keyboard.as_markup(),
+        )
+
+        await state.set_data(
+            {"outgoing_form_message_id": sended_message.message_id, "user_id": user_id}
+        )
+        await state.set_state(FromUserRename.name)
+
+
+@router.message(FromUserRename.name)
+async def user_name_form(message: types.Message, state: FSMContext, bot: Bot) -> None:
+    state_data = await state.get_data()
+    outgoing_form_message_id = state_data["outgoing_form_message_id"]
+    with suppress(TelegramBadRequest):
+        await bot.edit_message_reply_markup(
+            chat_id=message.from_user.id,
+            message_id=outgoing_form_message_id,
+            reply_markup=None,
+        )
+    user_id = copy(state_data["user_id"])
+    await state.clear()
+
+    new_name = message.text.strip()
+    cfg.TELEGRAM_USERS[user_id]["name"] = new_name
+    await crud_users.update_user(user_id, {"name": new_name})
+
+    with suppress(TelegramBadRequest):
+        await message.answer(text="User was renamed")
 
 
 @router.callback_query(CallbackUsersAction.filter(F.action == "Remove"))

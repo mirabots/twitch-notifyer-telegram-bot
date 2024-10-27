@@ -20,3 +20,7 @@ class FormLimitDefault(StatesGroup):
 
 class FormUserLimit(StatesGroup):
     value = State()
+
+
+class FromUserRename(StatesGroup):
+    name = State()

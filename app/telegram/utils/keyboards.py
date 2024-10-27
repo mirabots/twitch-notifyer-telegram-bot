@@ -71,7 +71,7 @@ def get_keyboard_picture(action: str, choices: list[str]) -> InlineKeyboardBuild
 
 def get_keyboard_users_actions() -> InlineKeyboardBuilder:
     keyboard = InlineKeyboardBuilder()
-    for action in ("Invite", "Remove"):
+    for action in ("Invite", "Rename", "Remove"):
         keyboard.button(text=action, callback_data=CallbackUsersAction(action=action))
     return keyboard
 

@@ -199,8 +199,8 @@ async def abort_handler(
         with suppress(TelegramBadRequest):
             await callback.message.edit_reply_markup(reply_markup=None)
             return
-    if action == "usra":
-        action_text = "Adding user"
+    if action == "usrn":
+        action_text = "Renaming user"
     if action == "usrr":
         action_text = "Removing user"
     if action == "usrsl":
