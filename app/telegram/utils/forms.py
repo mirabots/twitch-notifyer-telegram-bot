@@ -14,10 +14,6 @@ class FormChangePictureMode(StatesGroup):
     picture_input = State()
 
 
-class FormUserAdd(StatesGroup):
-    user_name = State()
-
-
 class FormLimitDefault(StatesGroup):
     value = State()
 

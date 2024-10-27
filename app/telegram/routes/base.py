@@ -15,6 +15,7 @@ from aiogram.utils import formatting
 from app.common.config import cfg
 from app.crud import chats as crud_chats
 from app.crud import subscriptions as crud_subs
+from app.crud import users as crud_users
 from app.telegram.utils.callbacks import CallbackAbort
 from app.twitch import functions as twitch
 
@@ -22,21 +23,35 @@ router = Router()
 
 
 @router.message(Command("start"))
-async def start_handler(message: types.Message):
+async def start_handler(message: types.Message, bot: Bot):
     chat_id = message.chat.id
     user_id = message.from_user.id
-    user_name = message.from_user.username
+    user_name = message.from_user.full_name + f" ({message.from_user.username})"
 
-    cfg.logger.info(f"Start user: {user_id=} {user_name=} {chat_id=}")
-
-    chat_added = await crud_chats.add_chat(chat_id, user_id)
-    message_text = (
-        "Bot started, this chat was added\nUse /info for some information"
-        if chat_added
-        else "Bot already started"
-    )
+    message_text = "You are not allowed to use this bot"
+    admin_message_text = ""
+    if user_id in cfg.TELEGRAM_USERS:
+        message_text = "Bot already started"
+    else:
+        join_code = message.text.removeprefix("/start").strip()
+        if await cfg.check_invite_code(join_code):
+            message_text = (
+                "Bot started, this chat was added\nUse /info for some information"
+            )
+            admin_message_text = f"User {user_name} joined"
+            await crud_users.add_user(user_id, cfg.TELEGRAM_LIMIT_DEFAULT, user_name)
+            await crud_chats.add_chat(chat_id, user_id)
+            cfg.TELEGRAM_USERS[user_id] = {
+                "limit": cfg.TELEGRAM_LIMIT_DEFAULT,
+                "name": user_name,
+            }
+    cfg.logger.info(f"Start user: {user_id=} {user_name=} {chat_id=} {message_text=}")
     with suppress(TelegramBadRequest):
         await message.answer(text=message_text)
+        if admin_message_text:
+            await bot.send_message(
+                chat_id=cfg.TELEGRAM_BOT_OWNER_ID, text=admin_message_text
+            )
 
 
 @router.my_chat_member(ChatMemberUpdatedFilter(IS_NOT_MEMBER >> ADMINISTRATOR))
@@ -49,14 +64,16 @@ async def start_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
     chat_id = event.chat.id
     chat_title = event.chat.title
     user_id = event.from_user.id
-    user_name = event.from_user.username
+    user_name = event.from_user.full_name + f" ({event.from_user.username})"
     user_channel_status = (await bot.get_chat_member(chat_id, user_id)).status
 
     if (
-        not (await crud_chats.user_exists(user_id))
-        or user_name not in cfg.TELEGRAM_ALLOWED
+        user_id not in cfg.TELEGRAM_USERS
         or user_channel_status != ChatMemberStatus.CREATOR
     ):
+        cfg.logger.info(
+            f"Start channel (REJECTED): {user_id=} {user_name=} {chat_id=} {chat_title=}"
+        )
         return
 
     cfg.logger.info(f"Start channel: {user_id=} {user_name=} {chat_id=} {chat_title=}")
@@ -73,16 +90,13 @@ async def start_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
 async def stop_handler(message: types.Message, bot: Bot):
     chat_id = message.chat.id
     user_id = message.from_user.id
-    user_name = message.from_user.username
+    user_name = message.from_user.full_name + f" ({message.from_user.username})"
 
     cfg.logger.info(f"Stop user: {user_id=} {user_name=}")
 
+    del cfg.TELEGRAM_USERS[user_id]
+    await crud_users.remove_user(user_id)
     user_chats = await crud_chats.get_user_chats(user_id)
-    if not user_chats:
-        message_text = "Bot already stopped"
-        await message.answer(text=message_text)
-        return
-
     await crud_chats.remove_chats(user_chats)
     subscriptions = await crud_subs.remove_unsubscribed_streamers()
     for subscription_id in subscriptions:
@@ -97,6 +111,9 @@ async def stop_handler(message: types.Message, bot: Bot):
     )
     with suppress(TelegramBadRequest):
         await message.answer(text=message_text)
+        await bot.send_message(
+            chat_id=cfg.TELEGRAM_BOT_OWNER_ID, text=f"User {user_name} leaved"
+        )
 
 
 @router.my_chat_member(ChatMemberUpdatedFilter(ADMINISTRATOR >> IS_NOT_MEMBER))
@@ -109,14 +126,13 @@ async def stop_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
     chat_id = event.chat.id
     chat_title = event.chat.title
     user_id = event.from_user.id
-    user_name = event.from_user.username
+    user_name = event.from_user.full_name + f" ({event.from_user.username})"
     user_channel_status = (await bot.get_chat_member(chat_id, user_id)).status
 
     if not (await crud_chats.chat_exists(chat_id)):
         return
     if (
-        not (await crud_chats.user_exists(user_id))
-        or user_name not in cfg.TELEGRAM_ALLOWED
+        user_name not in cfg.TELEGRAM_USERS
         or user_channel_status != ChatMemberStatus.CREATOR
     ):
         chat_owner = await crud_chats.get_chat_owner(chat_id)

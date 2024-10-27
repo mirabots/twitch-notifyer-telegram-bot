@@ -26,7 +26,7 @@ async def _auth() -> None:
         if cfg.ENV != "dev":
             datetime_utc_now = datetime.now(tz=timezone.utc).isoformat()
             await bot.send_message(
-                chat_id=cfg.BOT_OWNER_ID,
+                chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
                 text=f"ADMIN MESSAGE\nTWITCH AUTH FAILED at {datetime_utc_now}\n{str(e)}",
             )
 

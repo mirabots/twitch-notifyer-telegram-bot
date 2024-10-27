@@ -4,12 +4,6 @@ from app.db.common import async_session
 from app.db.models import Chats, Streamers
 
 
-async def get_users() -> list[int]:
-    async with async_session() as session, session.begin():
-        db_chats = await session.scalars(select(Chats))
-        return list(set([chat.user_id for chat in db_chats]))
-
-
 async def get_users_chats() -> dict[int, list[int]]:
     async with async_session() as session, session.begin():
         db_chats = await session.scalars(select(Chats))

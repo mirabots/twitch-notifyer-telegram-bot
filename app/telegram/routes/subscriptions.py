@@ -69,6 +69,7 @@ async def user_chats_handler(message: types.Message, bot: Bot):
 @router.message(Command("picture"))
 async def chats_handler(message: types.Message, bot: Bot):
     command_text = message.text.rstrip()
+    user_id = message.from_user.id
 
     action = "subs"
     if "/subscribe" in command_text:
@@ -80,7 +81,7 @@ async def chats_handler(message: types.Message, bot: Bot):
     if "/picture" in command_text:
         action = "pctr"
 
-    chats_ids = await crud_chats.get_user_chats(message.from_user.id)
+    chats_ids = await crud_chats.get_user_chats(user_id)
     chats = [await bot.get_chat(chat_id) for chat_id in chats_ids]
 
     main_keyboard = get_keyboard_chats(chats, action)
@@ -92,14 +93,12 @@ async def chats_handler(message: types.Message, bot: Bot):
     subs_string = ""
     message_string = "Choose chat/channel:"
     if action in ("subs", "sub", "unsub"):
-        subs_count = await crud_subs.get_user_subscription_count(message.from_user.id)
-        subs_limit = cfg.TELEGRAM_LIMITES.get(
-            message.from_user.username.lower(), cfg.TELEGRAM_LIMIT_DEFAULT
-        )
+        subs_count = await crud_subs.get_user_subscription_count(user_id)
+        subs_limit = cfg.TELEGRAM_USERS[user_id]["limit"]
         subs_string = f"Subscriptions count: {subs_count}/{subs_limit}\n"
 
         if action == "sub":
-            if subs_limit != "-" and subs_count >= subs_limit:
+            if subs_limit != None and subs_count >= subs_limit:
                 message_string = "You reached subscription limit!"
                 reply_markup = None
 

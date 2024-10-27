@@ -37,11 +37,14 @@ class CallbackUsersAction(CallbackData, prefix="usrsact"):
     action: str
 
 
-class CallbackChooseUser(CallbackData, prefix="usrr"):
+class CallbackChooseUser(CallbackData, prefix="usr"):
     action: str
-    user_id: int | None
-    user_num: int
+    user_id: int
 
 
 class CallbackLimitDefault(CallbackData, prefix="usrsld"):
     pass
+
+
+class CallbackUserLimit(CallbackData, prefix="usrl"):
+    action: str

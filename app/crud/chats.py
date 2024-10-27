@@ -4,14 +4,6 @@ from app.db.common import async_session
 from app.db.models import Chats, Subscriptions
 
 
-async def user_exists(user_id: int) -> bool:
-    async with async_session() as session, session.begin():
-        db_chat = await session.scalar(select(Chats).where(Chats.user_id == user_id))
-        if db_chat:
-            return True
-        return False
-
-
 async def chat_exists(chat_id: int) -> bool:
     async with async_session() as session, session.begin():
         db_chat = await session.scalar(select(Chats).where(Chats.id == chat_id))

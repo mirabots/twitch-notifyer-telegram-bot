@@ -1,5 +1,7 @@
 import getopt
 import logging
+import secrets
+import string
 import sys
 from types import SimpleNamespace
 
@@ -46,3 +48,16 @@ def disable_unnecessary_loggers() -> None:
 
     aiogram_event_logger = logging.getLogger("aiogram.event")
     aiogram_event_logger.setLevel(logging.CRITICAL)
+
+
+def generate_code() -> str:
+    alphabet = string.ascii_letters + string.digits
+    while True:
+        code = "".join(secrets.choice(alphabet) for i in range(60))
+        if (
+            sum(c.islower() for c in code) >= 10
+            and sum(c.isupper() for c in code) >= 10
+            and sum(c.isdigit() for c in code) >= 10
+        ):
+            break
+    return code
