@@ -6,6 +6,25 @@ from app.common.config import cfg
 from app.telegram.commands import COMMANDS_ADMIN
 
 
+class ActiveBotMiddleware(BaseMiddleware):
+    async def __call__(
+        self,
+        handler: Callable[
+            [types.Message | types.CallbackQuery, Dict[str, Any]], Awaitable[Any]
+        ],
+        event: types.Message | types.CallbackQuery,
+        data: Dict[str, Any],
+    ) -> Any:
+        command = (getattr(event, "text", "") or "").rstrip()
+        user_id = event.from_user.id
+
+        if cfg.BOT_ACTIVE:
+            return await handler(event, data)
+        else:
+            if user_id == cfg.TELEGRAM_BOT_OWNER_ID and command == "/pause":
+                return await handler(event, data)
+
+
 class AuthChatMiddleware(BaseMiddleware):
     async def __call__(
         self,
@@ -15,7 +34,7 @@ class AuthChatMiddleware(BaseMiddleware):
         event: types.Message | types.CallbackQuery,
         data: Dict[str, Any],
     ) -> Any:
-        command = getattr(event, "text", "").rstrip()
+        command = (getattr(event, "text", "") or "").rstrip()
         user_id = event.from_user.id
 
         if command == "/start" or command.startswith("/start "):
@@ -27,25 +46,6 @@ class AuthChatMiddleware(BaseMiddleware):
         return await handler(event, data)
 
 
-class ActiveBotMiddleware(BaseMiddleware):
-    async def __call__(
-        self,
-        handler: Callable[
-            [types.Message | types.CallbackQuery, Dict[str, Any]], Awaitable[Any]
-        ],
-        event: types.Message | types.CallbackQuery,
-        data: Dict[str, Any],
-    ) -> Any:
-        command = getattr(event, "text", "").rstrip()
-        user_id = event.from_user.id
-
-        if cfg.BOT_ACTIVE:
-            return await handler(event, data)
-        else:
-            if user_id == cfg.TELEGRAM_BOT_OWNER_ID and command == "/pause":
-                return await handler(event, data)
-
-
 class AdminMiddleware(BaseMiddleware):
     async def __call__(
         self,
@@ -55,7 +55,7 @@ class AdminMiddleware(BaseMiddleware):
         event: types.Message | types.CallbackQuery,
         data: Dict[str, Any],
     ) -> Any:
-        command = getattr(event, "text", "").rstrip()
+        command = (getattr(event, "text", "") or "").rstrip()
         admin_commands = ["/admin", *COMMANDS_ADMIN.keys()]
         user_id = event.from_user.id
 

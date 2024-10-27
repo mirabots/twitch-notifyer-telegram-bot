@@ -24,3 +24,7 @@ class FormUserLimit(StatesGroup):
 
 class FromUserRename(StatesGroup):
     name = State()
+
+
+class FormDump(StatesGroup):
+    dump = State()

@@ -7,6 +7,7 @@ from app.telegram.utils.callbacks import (
     CallbackChooseStreamer,
     CallbackChooseUser,
     CallbackDefault,
+    CallbackDump,
     CallbackLimitDefault,
     CallbackPicture,
     CallbackUserLimit,
@@ -101,4 +102,11 @@ def get_keyboard_user_limit() -> InlineKeyboardBuilder:
     keyboard = InlineKeyboardBuilder()
     for action in ("Unlim", "Default"):
         keyboard.button(text=action, callback_data=CallbackUserLimit(action=action))
+    return keyboard
+
+
+def get_keyboard_dump() -> InlineKeyboardBuilder:
+    keyboard = InlineKeyboardBuilder()
+    for action in ("Create", "Restore"):
+        keyboard.button(text=action, callback_data=CallbackDump(action=action))
     return keyboard

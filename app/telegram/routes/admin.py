@@ -1,5 +1,7 @@
+import json
 from contextlib import suppress
 from copy import copy
+from datetime import datetime, timezone
 
 from aiogram import Bot, F, Router, types
 from aiogram.exceptions import TelegramBadRequest
@@ -14,14 +16,21 @@ from app.crud import users as crud_users
 from app.telegram.commands import COMMANDS_ADMIN
 from app.telegram.utils.callbacks import (
     CallbackChooseUser,
+    CallbackDump,
     CallbackLimitDefault,
     CallbackUserLimit,
     CallbackUsersAction,
     get_choosed_callback_text,
 )
-from app.telegram.utils.forms import FormLimitDefault, FormUserLimit, FromUserRename
+from app.telegram.utils.forms import (
+    FormDump,
+    FormLimitDefault,
+    FormUserLimit,
+    FromUserRename,
+)
 from app.telegram.utils.keyboards import (
     get_keyboard_abort,
+    get_keyboard_dump,
     get_keyboard_limit_default,
     get_keyboard_user_limit,
     get_keyboard_users,
@@ -423,6 +432,84 @@ async def costs_handler(message: types.Message):
         message_text = ""
         for cost, value in costs_info.items():
             message_text += f"\n● {cost}\n○ {value}"
+
+    with suppress(TelegramBadRequest):
+        await message.answer(text=message_text)
+
+
+@router.message(Command("dump"))
+async def dump_handler(message: types.Message):
+    with suppress(TelegramBadRequest):
+        main_keyboard = get_keyboard_dump()
+        main_keyboard.adjust(2)
+        abort_keyboard = get_keyboard_abort("dump")
+        main_keyboard.attach(abort_keyboard)
+        await message.answer(
+            text="Choose dump action:",
+            reply_markup=main_keyboard.as_markup(),
+        )
+
+
+@router.callback_query(CallbackDump.filter(F.action == "Create"))
+async def dump_create_handler(callback: types.CallbackQuery):
+    with suppress(TelegramBadRequest):
+        await callback.message.edit_text(text="Created dump:", reply_markup=None)
+
+        dump = await crud_admin.create_dump()
+        jsoned_payload = json.dumps(
+            dump, ensure_ascii=False, indent=4, separators=(",", ": ")
+        )
+        current_datetime = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
+        file = types.BufferedInputFile(
+            jsoned_payload.encode(), f"tntb_{cfg.ENV}_{current_datetime}.json"
+        )
+
+        await callback.message.answer_document(document=file)
+
+
+@router.callback_query(CallbackDump.filter(F.action == "Restore"))
+async def dump_restore_handler(callback: types.CallbackQuery, state: FSMContext):
+    with suppress(TelegramBadRequest):
+        abort_keyboard = get_keyboard_abort("dumpr")
+        sended_message = await callback.message.edit_text(
+            text="Send json-file for restoring dump:",
+            reply_markup=abort_keyboard.as_markup(),
+        )
+        await state.set_data({"outgoing_form_message_id": sended_message.message_id})
+        await state.set_state(FormDump.dump)
+
+
+@router.message(FormDump.dump)
+async def dump_restore_form(
+    message: types.Message, state: FSMContext, bot: Bot
+) -> None:
+    state_data = await state.get_data()
+    outgoing_form_message_id = state_data["outgoing_form_message_id"]
+    with suppress(TelegramBadRequest):
+        await bot.edit_message_reply_markup(
+            chat_id=message.from_user.id,
+            message_id=outgoing_form_message_id,
+            reply_markup=None,
+        )
+    await state.clear()
+
+    message_text = "Dump was restored"
+    input_file = message.document
+    if not input_file:
+        message_text = "No file was sended"
+    else:
+        file = await bot.download(input_file)
+        json_data = None
+        try:
+            json_data = json.load(file)
+        except Exception:
+            message_text = "File is not json"
+        if json_data:
+            await crud_admin.restore_dump(json_data)
+            # try:
+            #     await crud_admin.restore_dump(json_data)
+            # except Exception:
+            #     message_text = "Incorrect json data"
 
     with suppress(TelegramBadRequest):
         await message.answer(text=message_text)

@@ -48,3 +48,7 @@ class CallbackLimitDefault(CallbackData, prefix="usrsld"):
 
 class CallbackUserLimit(CallbackData, prefix="usrl"):
     action: str
+
+
+class CallbackDump(CallbackData, prefix="dump"):
+    action: str
