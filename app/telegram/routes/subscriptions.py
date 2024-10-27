@@ -8,6 +8,7 @@ from aiogram.utils import formatting
 
 from app.common.config import cfg
 from app.crud import chats as crud_chats
+from app.crud import streamers as crud_streamers
 from app.crud import subscriptions as crud_subs
 from app.telegram.utils.callbacks import (
     CallbackChooseChat,
@@ -16,11 +17,7 @@ from app.telegram.utils.callbacks import (
     CallbackPicture,
     get_choosed_callback_text,
 )
-from app.telegram.utils.forms import (
-    FormChangePictureMode,
-    FormChangeTemplate,
-    FormSubscribe,
-)
+from app.telegram.utils.forms import FormChangeTemplate, FormSubscribe
 from app.telegram.utils.keyboards import (
     get_keyboard_abort,
     get_keyboard_chats,
@@ -186,12 +183,12 @@ async def subscribe_form(message: types.Message, state: FSMContext, bot: Bot) ->
         await message.answer(text="No streamer with this name")
         return
 
-    if (await crud_subs.check_streamer(streamer_id)) == None:
+    if (await crud_streamers.check_streamer(streamer_id)) == None:
         subscription_id = await twitch.subscribe_event(streamer_id, "stream.online")
         if not subscription_id:
             await message.answer(text="Subscription error from twitch")
             return
-        await crud_subs.add_streamer(streamer_id, streamer_name, subscription_id)
+        await crud_streamers.add_streamer(streamer_id, streamer_name, subscription_id)
 
     newly_subbed = await crud_subs.subscribe_to_streamer(chat_id, streamer_id)
     message_text = "Subscribed for notifications"
@@ -406,9 +403,7 @@ async def picture_streamer_handler(
         await callback.message.edit_text(
             text=f"'{streamer_name}' choosen", reply_markup=None
         )
-        main_keyboard = get_keyboard_picture(
-            callback_data.action, ["Stream start screen", "Disabled"]
-        )
+        main_keyboard = get_keyboard_picture()
         abort_keyboard = get_keyboard_abort(callback_data.action)
         main_keyboard.attach(abort_keyboard)
         sended_message = await callback.message.answer(
@@ -423,10 +418,9 @@ async def picture_streamer_handler(
                 "outgoing_form_message_id": sended_message.message_id,
             }
         )
-        await state.set_state(FormChangePictureMode.template_text)
 
 
-@router.callback_query(CallbackPicture.filter(F.action == "pctr"))
+@router.callback_query(CallbackPicture.filter())
 async def picture_streamer_mode_handler(
     callback: types.CallbackQuery,
     state: FSMContext,

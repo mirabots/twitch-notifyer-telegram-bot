@@ -11,6 +11,7 @@ from aiogram.fsm.context import FSMContext
 from app.common.config import cfg
 from app.crud import admin as crud_admin
 from app.crud import chats as crud_chats
+from app.crud import streamers as crud_streamers
 from app.crud import subscriptions as crud_subs
 from app.crud import users as crud_users
 from app.telegram.commands import COMMANDS_ADMIN
@@ -87,7 +88,7 @@ async def secrets_reload_handler(message: types.Message):
 
 @router.message(Command("users"))
 async def users_handler(message: types.Message, bot: Bot):
-    users_channels = await crud_admin.get_users_chats()
+    users_channels = await crud_chats.get_users_chats()
     message_text = f"Users ({len(cfg.TELEGRAM_USERS)}):"
 
     for user_id, user_channels in users_channels.items():
@@ -409,7 +410,7 @@ async def user_limit_form(message: types.Message, state: FSMContext, bot: Bot) -
 
 @router.message(Command("streamers"))
 async def streamers_handler(message: types.Message):
-    streamers = await crud_admin.get_all_streamers()
+    streamers = await crud_streamers.get_all_streamers()
     if not streamers:
         message_text = "No streamers"
     else:

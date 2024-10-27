@@ -42,3 +42,16 @@ async def get_user_chats(user_id: int) -> list[int]:
     async with async_session() as session, session.begin():
         db_chats = await session.scalars(select(Chats).where(Chats.user_id == user_id))
         return [chat.id for chat in db_chats]
+
+
+async def get_users_chats() -> dict[int, list[int]]:
+    async with async_session() as session, session.begin():
+        db_chats = await session.scalars(select(Chats))
+
+        result = {}
+        for chat in db_chats:
+            if chat.user_id not in result:
+                result[chat.user_id] = []
+            if chat.id != chat.user_id:
+                result[chat.user_id].append(chat.id)
+        return result

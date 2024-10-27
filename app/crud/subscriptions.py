@@ -4,49 +4,6 @@ from app.db.common import async_session
 from app.db.models import Chats, Streamers, Subscriptions
 
 
-async def check_streamer(streamer_id: str) -> bool:
-    async with async_session() as session, session.begin():
-        db_streamer = await session.scalar(
-            select(Streamers).where(Streamers.id == streamer_id)
-        )
-        if not db_streamer:
-            return None
-        return db_streamer.name
-
-
-async def add_streamer(
-    streamer_id: str, streamer_name: str, subscription_id: str
-) -> bool:
-    async with async_session() as session, session.begin():
-        db_streamer = await session.scalar(
-            select(Streamers).where(Streamers.id == streamer_id)
-        )
-        if db_streamer:
-            return False
-
-        await session.execute(
-            insert(Streamers).values(
-                {
-                    "id": streamer_id,
-                    "name": streamer_name,
-                    "subscription_id": subscription_id,
-                }
-            )
-        )
-        return True
-
-
-async def update_streamer_name(streamer_id: str, streamer_name: str) -> None:
-    async with async_session() as session, session.begin():
-        await session.execute(
-            update(Subscriptions)
-            .where(
-                Subscriptions.streamer_id == streamer_id,
-            )
-            .values(name=streamer_name)
-        )
-
-
 async def subscribe_to_streamer(chat_id: int, streamer_id: str) -> bool:
     async with async_session() as session, session.begin():
         db_active_subscription = await session.scalar(
@@ -78,24 +35,6 @@ async def unsubscribe_from_streamer(chat_id: int, streamer_id: str) -> None:
                 Subscriptions.streamer_id == streamer_id,
             )
         )
-
-
-async def check_duplicate_event_message(streamer_id: str, message_id: str) -> bool:
-    async with async_session() as session, session.begin():
-        db_streamer = await session.scalar(
-            select(Streamers).where(
-                Streamers.id == streamer_id, Streamers.last_message == message_id
-            )
-        )
-        if db_streamer:
-            return True
-
-        await session.execute(
-            update(Streamers)
-            .where(Streamers.id == streamer_id)
-            .values(last_message=message_id)
-        )
-        return False
 
 
 async def get_subscribed_chats(streamer_id: str) -> list[dict[str, int | str]]:
@@ -158,11 +97,6 @@ async def get_subscribed_users(streamer_id: str) -> list[int]:
             .where(Subscriptions.streamer_id == streamer_id)
         )
         return set([chat.user_id for chat in chats])
-
-
-async def remove_streamer(streamer_id: str) -> None:
-    async with async_session() as session, session.begin():
-        await session.execute(delete(Streamers).where(Streamers.id == streamer_id))
 
 
 async def remove_streamer_subscriptions(streamer_id: str) -> None:

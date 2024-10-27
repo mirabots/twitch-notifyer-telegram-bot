@@ -30,7 +30,7 @@ class CallbackDefault(CallbackData, prefix="dflt"):
 
 
 class CallbackPicture(CallbackData, prefix="pctr"):
-    action: str
+    choice_id: int
 
 
 class CallbackUsersAction(CallbackData, prefix="usrsact"):

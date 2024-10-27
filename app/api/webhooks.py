@@ -1,3 +1,4 @@
+import traceback
 from typing import Any
 
 from aiogram import types
@@ -16,8 +17,16 @@ async def webhook_telegram(data: dict[str, Any], headers: dict[str, str]) -> Any
     verify_telegram_secret(headers)
 
     cfg.logger.debug(data)
-    telegram_update = types.Update(**data)
-    await dp.feed_update(bot=bot, update=telegram_update)
+    try:
+        telegram_update = types.Update(**data)
+        await dp.feed_update(bot=bot, update=telegram_update)
+    except Exception as exc:
+        if cfg.ENV != "dev":
+            await bot.send_message(
+                chat_id=cfg.TELEGRAM_BOT_OWNER_ID, text=f"ADMIN MESSAGE ERROR\n{exc}"
+            )
+        cfg.logger.error(exc)
+        traceback.print_exception(exc)
     return Response(status_code=HTTP_204_NO_CONTENT, content=None)
 
 
@@ -26,18 +35,19 @@ async def webhook_twitch(
     data: dict[str, Any], headers: dict[str, str], request: Request
 ) -> None | str:
     await verify_twitch_secret(request)
+    cfg.logger.debug(data)
 
     if data.get("subscription", {}).get("type", "") != "stream.online":
         cfg.logger.error("Notification is not 'stream.online'")
         return Response(status_code=HTTP_204_NO_CONTENT, content=None)
 
-    event_type = headers.get("Twitch-Eventsub-Message-Type")
+    event_type = headers.get("Twitch-Eventsub-Message-Type".lower())
     streamer_id = (
         data.get("subscription", {})
         .get("condition", {})
         .get("broadcaster_user_id", "0")
     )
-    message_id = headers.get("Twitch-Eventsub-Message-Id", "")
+    message_id = headers.get("Twitch-Eventsub-Message-Id".lower(), "")
     cfg.logger.info(f"{message_id=} {streamer_id=} {event_type=}")
 
     if event_type == "webhook_callback_verification":

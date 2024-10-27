@@ -9,11 +9,6 @@ class FormChangeTemplate(StatesGroup):
     template_text = State()
 
 
-class FormChangePictureMode(StatesGroup):
-    picture_mode = State()
-    picture_input = State()
-
-
 class FormLimitDefault(StatesGroup):
     value = State()
 
