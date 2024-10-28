@@ -131,6 +131,7 @@ jobs:
             docker run -d \
               -it \
               --name tntb-${{ env.B_ENV }} \
+              --restart always \
               --network=host \
               -e APP_HOST=127.0.0.1 \
               -e APP_PORT=${{ env.TNTB_DEPLOY_DOCKER_PORT }} \
