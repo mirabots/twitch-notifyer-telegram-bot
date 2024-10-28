@@ -195,6 +195,9 @@ async def abort_handler(
         action_text = "Changing template"
     if action == "pctr":
         action_text = "Changing picture mode"
+    if action == "ntfctn":
+        action_text = "Testing notification"
+
     if action == "usrs":
         with suppress(TelegramBadRequest):
             await callback.message.edit_reply_markup(reply_markup=None)

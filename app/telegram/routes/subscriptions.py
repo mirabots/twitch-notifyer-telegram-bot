@@ -1,4 +1,6 @@
 from contextlib import suppress
+from datetime import datetime, timezone
+from string import Template
 
 from aiogram import Bot, F, Router, types
 from aiogram.exceptions import TelegramBadRequest
@@ -64,19 +66,28 @@ async def user_chats_handler(message: types.Message, bot: Bot):
 @router.message(Command("unsubscribe"))
 @router.message(Command("template"))
 @router.message(Command("picture"))
+@router.message(Command("notification_test"))
 async def chats_handler(message: types.Message, bot: Bot):
     command_text = message.text.rstrip()
     user_id = message.from_user.id
 
     action = "subs"
+    action_string = "Subscriptions list\n"
     if "/subscribe" in command_text:
         action = "sub"
+        action_string = "Subscribe to stream notification\n"
     if "/unsubscribe" in command_text:
         action = "unsub"
+        action_string = "Unsubscribe from stream notification\n"
     if "/template" in command_text:
         action = "tmplt"
+        action_string = "Change notification template\n"
     if "/picture" in command_text:
         action = "pctr"
+        action_string = "Change notification picture mode\n"
+    if "/notification_test" in command_text:
+        action = "ntfctn"
+        action_string = "Test notification\n"
 
     chats_ids = await crud_chats.get_user_chats(user_id)
     chats = [await bot.get_chat(chat_id) for chat_id in chats_ids]
@@ -92,7 +103,7 @@ async def chats_handler(message: types.Message, bot: Bot):
     if action in ("subs", "sub", "unsub"):
         subs_count = await crud_subs.get_user_subscription_count(user_id)
         subs_limit = cfg.TELEGRAM_USERS[user_id]["limit"]
-        subs_string = f"Subscriptions count: {subs_count}/{subs_limit}\n"
+        subs_string = f"Subs count: {subs_count}/{subs_limit}\n"
 
         if action == "sub":
             if subs_limit != None and subs_count >= subs_limit:
@@ -101,7 +112,8 @@ async def chats_handler(message: types.Message, bot: Bot):
 
     with suppress(TelegramBadRequest):
         await message.answer(
-            text=f"{subs_string}{message_string}", reply_markup=reply_markup
+            text=f"{action_string}{subs_string}{message_string}",
+            reply_markup=reply_markup,
         )
 
 
@@ -115,20 +127,17 @@ async def subscriptions_handler(
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(
-            text=f"'{chat_name}' choosen", reply_markup=None
+            text=f"Subscriptions list\n'{chat_name}' choosen", reply_markup=None
         )
         streamers = await crud_subs.get_subscriptions(callback_data.id)
         if not streamers:
             message_text = "No subscriptions"
         else:
             streamers_with_names = await twitch.get_streamers_names(streamers)
-            message_text = (
-                f"Subscriptions ({len(streamers_with_names)}):\n● "
-                + "\n● ".join(
-                    sorted(
-                        list(streamers_with_names.values()),
-                        key=lambda name: name.lower(),
-                    )
+            message_text = f"Count: ({len(streamers_with_names)})\n● " + "\n● ".join(
+                sorted(
+                    list(streamers_with_names.values()),
+                    key=lambda name: name.lower(),
                 )
             )
 
@@ -145,11 +154,12 @@ async def subscribe_handler(
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(
-            text=f"'{chat_name}' choosen", reply_markup=None
+            text=f"Subscribe to stream notification\n'{chat_name}' choosen",
+            reply_markup=None,
         )
         abort_keyboard = get_keyboard_abort(callback_data.action)
         sended_message = await callback.message.answer(
-            text="Enter streamer name to subscribe:",
+            text="Enter streamer name:",
             reply_markup=abort_keyboard.as_markup(),
         )
 
@@ -208,7 +218,8 @@ async def unsubscribe_handler(
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(
-            text=f"'{chat_name}' choosen", reply_markup=None
+            text=f"Unsubscribe from stream notification\n'{chat_name}' choosen",
+            reply_markup=None,
         )
         streamers = await crud_subs.get_subscriptions(chat_id)
         if not streamers:
@@ -223,7 +234,7 @@ async def unsubscribe_handler(
             main_keyboard.attach(abort_keyboard)
 
             await callback.message.answer(
-                text="Choose streamer to unsubscribe:",
+                text="Choose streamer:",
                 reply_markup=main_keyboard.as_markup(),
             )
 
@@ -260,7 +271,8 @@ async def template_handler(
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(
-            text=f"'{chat_name}' choosen", reply_markup=None
+            text=f"Change notification template\n'{chat_name}' choosen",
+            reply_markup=None,
         )
         streamers = await crud_subs.get_subscriptions(chat_id)
         if not streamers:
@@ -275,7 +287,7 @@ async def template_handler(
             main_keyboard.attach(abort_keyboard)
 
             await callback.message.answer(
-                text="Choose streamer to change template:",
+                text="Choose streamer:",
                 reply_markup=main_keyboard.as_markup(),
             )
 
@@ -365,7 +377,8 @@ async def picture_handler(
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(
-            text=f"'{chat_name}' choosen", reply_markup=None
+            text=f"Change notification picture mode\n'{chat_name}' choosen",
+            reply_markup=None,
         )
         streamers = await crud_subs.get_subscriptions(chat_id)
         if not streamers:
@@ -380,7 +393,7 @@ async def picture_handler(
             main_keyboard.attach(abort_keyboard)
 
             await callback.message.answer(
-                text="Choose streamer to change notification picture mode:",
+                text="Choose streamer:",
                 reply_markup=main_keyboard.as_markup(),
             )
 
@@ -407,7 +420,7 @@ async def picture_streamer_handler(
         abort_keyboard = get_keyboard_abort(callback_data.action)
         main_keyboard.attach(abort_keyboard)
         sended_message = await callback.message.answer(
-            text=f"Change notification picture mode\nCurrent mode: '{current_picture_mode}'",
+            text=f"Current mode: '{current_picture_mode}'",
             reply_markup=main_keyboard.as_markup(),
         )
 
@@ -448,3 +461,106 @@ async def picture_streamer_mode_handler(
 
             await crud_subs.change_picture_mode(chat_id, streamer_id, picture_mode)
             await callback.message.answer(text=f"New mode ('{picture_mode}') was set")
+
+
+@router.callback_query(CallbackChooseChat.filter(F.action == "ntfctn"))
+async def notification_test_handler(
+    callback: types.CallbackQuery, callback_data: CallbackChooseChat
+):
+    chat_id = callback_data.id
+    chat_name = get_choosed_callback_text(
+        callback.message.reply_markup.inline_keyboard, callback.data
+    )
+
+    with suppress(TelegramBadRequest):
+        await callback.message.edit_text(
+            text=f"Test notification\n'{chat_name}' choosen", reply_markup=None
+        )
+        streamers = await crud_subs.get_subscriptions(chat_id)
+        if not streamers:
+            await callback.message.answer(text="No subscriptions", reply_markup=None)
+        else:
+            streamers_with_names = await twitch.get_streamers_names(streamers)
+            main_keyboard = get_keyboard_streamers(
+                "ntfctn", streamers_with_names, chat_id
+            )
+            main_keyboard.adjust(3)
+            abort_keyboard = get_keyboard_abort(callback_data.action)
+            main_keyboard.attach(abort_keyboard)
+
+            await callback.message.answer(
+                text="Choose streamer:",
+                reply_markup=main_keyboard.as_markup(),
+            )
+
+
+@router.callback_query(CallbackChooseStreamer.filter(F.action == "ntfctn"))
+async def notification_test_message_handler(
+    callback: types.CallbackQuery, callback_data: CallbackChooseStreamer, bot: Bot
+):
+    streamer_name = get_choosed_callback_text(
+        callback.message.reply_markup.inline_keyboard, callback.data
+    )
+    streamer_login = streamer_name.lower()
+    chat_id = callback_data.chat_id
+    streamer_id = callback_data.streamer_id
+
+    with suppress(TelegramBadRequest):
+        current_picture_mode = await crud_subs.get_current_picture_mode(
+            chat_id, streamer_id
+        )
+        await callback.message.edit_text(
+            text=f"'{streamer_name}' choosen\nCurrent picture mode: '{current_picture_mode}'",
+            reply_markup=None,
+        )
+
+        subscription_info = await crud_subs.get_subscription(chat_id, streamer_id)
+        sub_template = subscription_info.message_template
+        sub_picture_mode = subscription_info.picture_mode
+
+        stream_info = await twitch.get_channel_info(streamer_id)
+        stream_info["thumbnail_url"] = (
+            "https://static-cdn.jtvnw.net/previews-ttv/live_user_"
+            + streamer_login
+            + "-{width}x{height}.jpg"
+        )
+
+        default_title = "My awesome test stream title"
+        default_category = "Just Chatting"
+        stream_title = stream_info.get("title", default_title) or default_title
+        stream_category = (
+            stream_info.get("category", default_category) or default_category
+        )
+        stream_details = f"\n● {stream_title}\n○ {stream_category}\n"
+
+        template = Template(sub_template or "$streamer_name started stream")
+        filled_template = template.safe_substitute({"streamer_name": streamer_name})
+
+        message = formatting.Text(
+            formatting.Bold(filled_template),
+            f"\n{stream_details}\n",
+            formatting.Bold(f"twitch.tv/{streamer_login}"),
+        )
+        message_text, message_entities = message.render()
+
+        if sub_picture_mode == "Disabled":
+            await callback.message.answer(
+                text=message_text,
+                entities=message_entities,
+                link_preview_options=types.LinkPreviewOptions(is_disabled=True),
+            )
+        elif sub_picture_mode == "Stream start screenshot":
+            utc_now = datetime.now(tz=timezone.utc).strftime("%Y_%m_%d_%H_%M_%S")
+            stream_picture = types.URLInputFile(
+                stream_info["thumbnail_url"].format(width="1920", height="1080"),
+                filename=f"{streamer_login}_{utc_now}.jpg",
+                bot=bot,
+            )
+
+            await callback.message.answer_photo(
+                photo=stream_picture,
+                caption=message_text,
+                caption_entities=message_entities,
+            )
+        else:
+            pass

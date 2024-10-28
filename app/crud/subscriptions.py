@@ -143,3 +143,13 @@ async def get_user_subscription_count(user_id: int) -> tuple[int, int]:
             )
         ).fetchone()
         return subs_count
+
+
+async def get_subscription(chat_id: int, streamer_id: int) -> Subscriptions:
+    async with async_session() as session, session.begin():
+        return await session.scalar(
+            select(Subscriptions).where(
+                Subscriptions.chat_id == chat_id,
+                Subscriptions.streamer_id == streamer_id,
+            )
+        )
