@@ -8,9 +8,7 @@ from app.twitch.api import (
     _get_channel_info,
     _get_costs,
     _get_stream_info,
-    _get_streamer_id,
-    _get_streamer_picture,
-    _get_streamers_names,
+    _get_streamers_info,
     _subscribe_event,
     _unsubscribe_event,
 )
@@ -29,37 +27,47 @@ async def _make_api_request(
         return Response(status_code=-1, content="{}")
 
 
-async def get_streamer_id(streamer_name: str) -> str:
-    answer = await _make_api_request(_get_streamer_id, streamer_name)
+async def get_streamer_info(streamer_login: str) -> dict[str, str]:
+    answer = await _make_api_request(_get_streamers_info, {"login": streamer_login})
     if answer.status_code != 200:
         cfg.logger.error(f"Getting streamer id error with code {answer.status_code}")
-        return ""
+        return {}
 
     answer_json = answer.json()
-    if not answer_json["data"]:
-        return ""
-    return answer_json["data"][0]["id"]
-
-
-async def get_streamers_names(streamers_ids: list[str]) -> dict[str, str]:
-    answer = await _make_api_request(_get_streamers_names, streamers_ids)
-
-    answer_json = answer.json()
+    if not answer_json.get("data"):
+        return {}
     return {
-        streamer["id"]: streamer["display_name"] for streamer in answer_json["data"]
+        "id": answer_json["data"][0]["id"],
+        "name": answer_json["data"][0]["display_name"],
     }
 
 
-async def get_streamer_picture(streamer_id: str) -> str:
-    answer = await _make_api_request(_get_streamer_picture, streamer_id)
-    if answer.status_code != 200:
-        cfg.logger.error(f"Getting stream picture error with code {answer.status_code}")
-        return ""
+async def get_streamers_names(streamers_ids: list[str]) -> dict[str, str]:
+    correct_get = True
+    result = {}
+    slice_size = 100
+    while streamers_ids:
+        streamers_ids_slice = streamers_ids[:slice_size]
+        answer = await _make_api_request(
+            _get_streamers_info, {"id": streamers_ids_slice}
+        )
 
-    answer_json = answer.json()
-    if not answer_json["data"]:
-        return ""
-    return answer_json["data"][0]["profile_image_url"]
+        answer_json = answer.json()
+        if not answer_json.get("data"):
+            correct_get = False
+            break
+        else:
+            result.update(
+                {
+                    streamer["id"]: streamer["display_name"]
+                    for streamer in answer_json["data"]
+                }
+            )
+        del streamers_ids[:slice_size]
+
+    if not correct_get:
+        return {}
+    return result
 
 
 async def get_stream_info(streamer_id: str) -> dict[str, str]:
@@ -69,7 +77,7 @@ async def get_stream_info(streamer_id: str) -> dict[str, str]:
         return {}
 
     answer_json = answer.json()
-    if not answer_json["data"]:
+    if not answer_json.get("data"):
         return {}
     return {
         "title": answer_json["data"][0]["title"],
@@ -85,7 +93,7 @@ async def get_channel_info(streamer_id: str) -> dict[str, str]:
         return {}
 
     answer_json = answer.json()
-    if not answer_json["data"]:
+    if not answer_json.get("data"):
         return {}
     return {
         "title": answer_json["data"][0]["title"],
@@ -102,7 +110,7 @@ async def subscribe_event(streamer_id: str, event_type: str) -> str:
         return ""
 
     answer_json = answer.json()
-    if not answer_json["data"]:
+    if not answer_json.get("data"):
         return ""
     return answer_json["data"][0]["id"]
 

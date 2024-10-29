@@ -409,20 +409,41 @@ async def user_limit_form(message: types.Message, state: FSMContext, bot: Bot) -
 
 
 @router.message(Command("streamers"))
-async def streamers_handler(message: types.Message):
+async def streamers_handler(message: types.Message, bot: Bot):
     streamers = await crud_streamers.get_all_streamers()
     if not streamers:
-        message_text = "No streamers"
+        with suppress(TelegramBadRequest):
+            await message.answer(text="No streamers")
     else:
-        streamers_with_names = await twitch.get_streamers_names(streamers)
-        message_text = f"Streamers ({len(streamers_with_names)}):"
+        with suppress(TelegramBadRequest):
+            sended_message = await message.answer(
+                text="Updating streamers names from twitch"
+            )
+
+        streamers_with_names = await twitch.get_streamers_names(list(streamers.keys()))
+        for streamer_id, streamer_name in streamers.items():
+            twitch_name = streamers_with_names.get(streamer_id, "")
+            if streamer_name in ("-", None) or (
+                twitch_name != "" and streamer_name != twitch_name
+            ):
+                if not twitch_name:
+                    streamer_with_name = await twitch.get_streamers_names([streamer_id])
+                    twitch_name = streamer_with_name[streamer_id]
+                await crud_streamers.update_streamer_name(streamer_id, twitch_name)
+                streamers[streamer_id] = twitch_name
+
+        message_text = f"Streamers ({len(streamers)}):"
         for streamer_name in sorted(
-            list(streamers_with_names.values()), key=lambda name: name.lower()
+            list(streamers.values()), key=lambda name: name.lower()
         ):
             message_text += f"\n● {streamer_name}"
 
-    with suppress(TelegramBadRequest):
-        await message.answer(text=message_text)
+        with suppress(TelegramBadRequest):
+            await bot.edit_message_text(
+                chat_id=message.from_user.id,
+                message_id=sended_message.message_id,
+                text=message_text,
+            )
 
 
 @router.message(Command("costs"))

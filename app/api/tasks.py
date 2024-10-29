@@ -26,8 +26,12 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
         if streamer_name_db == None:
             cfg.logger.error("Streamer not in db")
             return
-        elif streamer_name_db != streamer_login:
-            await crud_streamers.update_streamer_name(streamer_id, streamer_login)
+        elif streamer_name != "" and streamer_name_db != streamer_name:
+            await crud_streamers.update_streamer_name(streamer_id, streamer_name)
+            streamer_name_db = streamer_name
+
+        streamer_login = event.get("broadcaster_user_login", streamer_name_db.lower())
+        streamer_name = event.get("broadcaster_user_name", streamer_name_db)
 
         if await crud_streamers.check_duplicate_event_message(streamer_id, message_id):
             cfg.logger.error("Duplicated event message")
@@ -103,7 +107,8 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
     except Exception as exc:
         if cfg.ENV != "dev":
             await bot.send_message(
-                chat_id=cfg.TELEGRAM_BOT_OWNER_ID, text=f"ADMIN MESSAGE ERROR\n{exc}"
+                chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                text=f"ADMIN MESSAGE\nNOTIFICATION ERROR\n{exc}",
             )
         cfg.logger.error(exc)
         traceback.print_exception(exc)
@@ -139,10 +144,25 @@ async def revoke_subscriptions(event: dict) -> None:
             await bot.send_message(
                 chat_id=user, text=message_text, entities=message_entities
             )
+        if cfg.TELEGRAM_BOT_OWNER_ID not in users:
+            message = Text(
+                "ADMIN MESSAGE\nSubscription to ",
+                Bold(f"{streamer_name_db} ({streamer_id})"),
+                " was revoked by twitch\n",
+                Bold("Reason: "),
+                reason,
+            )
+            message_text, message_entities = message.render()
+            await bot.send_message(
+                chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                text=message_text,
+                entities=message_entities,
+            )
     except Exception as exc:
         if cfg.ENV != "dev":
             await bot.send_message(
-                chat_id=cfg.TELEGRAM_BOT_OWNER_ID, text=f"ADMIN MESSAGE ERROR\n{exc}"
+                chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                text=f"ADMIN MESSAGE\nREVOKATION ERROR\n{exc}",
             )
         cfg.logger.error(exc)
         traceback.print_exception(exc)

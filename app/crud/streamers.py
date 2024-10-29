@@ -4,13 +4,13 @@ from app.db.common import async_session
 from app.db.models import Streamers
 
 
-async def get_all_streamers() -> list[str]:
+async def get_all_streamers() -> dict[str, str]:
     async with async_session() as session, session.begin():
         db_streamers = await session.scalars(select(Streamers))
-        return [streamer.id for streamer in db_streamers]
+        return {streamer.id: streamer.name for streamer in db_streamers}
 
 
-async def check_streamer(streamer_id: str) -> bool:
+async def check_streamer(streamer_id: str) -> str | None:
     async with async_session() as session, session.begin():
         db_streamer = await session.scalar(
             select(Streamers).where(Streamers.id == streamer_id)

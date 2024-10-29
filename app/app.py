@@ -7,6 +7,7 @@ from litestar.status_codes import HTTP_500_INTERNAL_SERVER_ERROR
 
 from app.api.webhooks import router as litestar_router
 from app.common.config import cfg
+from app.crud.streamers import get_all_streamers, update_streamer_name
 from app.crud.users import add_user, get_users, update_user
 from app.db.common import _engine, check_db
 from app.telegram.bot import bot, dp
@@ -19,6 +20,7 @@ from app.telegram.middlewares import (
 from app.telegram.routes.admin import router as telegram_router_admin
 from app.telegram.routes.base import router as telegram_router_base
 from app.telegram.routes.subscriptions import router as telegram_router_subscriptions
+from app.twitch.functions import get_streamers_names
 
 
 @asynccontextmanager
@@ -46,15 +48,40 @@ async def lifespan_function(app: Litestar) -> AsyncGenerator[None, None]:
     await bot.set_my_description("Twitch stream.online notification bot")
 
     cfg.TELEGRAM_USERS = await get_users()
-    for user_id, user_data in cfg.TELEGRAM_USERS.items():
-        if str(user_id) == user_data["name"]:
-            user_info = await bot.get_chat(user_id)
-            user_name = user_info.full_name + f" ({user_info.username})"
-            await update_user(user_id, {"name": user_name})
-            cfg.TELEGRAM_USERS[user_id]["name"] = user_name
+    # add owner at first startup
     if cfg.TELEGRAM_BOT_OWNER_ID not in cfg.TELEGRAM_USERS:
+        cfg.logger.info("Adding owner admin user")
         cfg.TELEGRAM_USERS[cfg.TELEGRAM_BOT_OWNER_ID] = {"limit": None, "name": "admin"}
         await add_user(cfg.TELEGRAM_BOT_OWNER_ID, None, "admin")
+
+    # update users names (after db changes)
+    if any(
+        [
+            str(user_id) == user_data["name"]
+            for user_id, user_data in cfg.TELEGRAM_USERS.items()
+        ]
+    ):
+        cfg.logger.info("Updating users names")
+        for user_id, user_data in cfg.TELEGRAM_USERS.items():
+            if str(user_id) == user_data["name"]:
+                user_info = await bot.get_chat(user_id)
+                user_name = user_info.full_name + f" ({user_info.username})"
+                await update_user(user_id, {"name": user_name})
+                cfg.TELEGRAM_USERS[user_id]["name"] = user_name
+
+    # update streamers names
+    streamers = await get_all_streamers()
+    cfg.logger.info("Updating streamers names")
+    streamers_with_names = await get_streamers_names(list(streamers.keys()))
+    for streamer_id, streamer_name in streamers.items():
+        twitch_name = streamers_with_names.get(streamer_id, "")
+        if streamer_name in ("-", None) or (
+            twitch_name != "" and streamer_name != twitch_name
+        ):
+            if not twitch_name:
+                streamer_with_name = await get_streamers_names([streamer_id])
+                twitch_name = streamer_with_name[streamer_id]
+            await update_streamer_name(streamer_id, twitch_name)
 
     if cfg.ENV != "dev":
         await bot.send_message(

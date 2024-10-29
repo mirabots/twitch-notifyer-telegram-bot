@@ -23,7 +23,8 @@ async def webhook_telegram(data: dict[str, Any], headers: dict[str, str]) -> Any
     except Exception as exc:
         if cfg.ENV != "dev":
             await bot.send_message(
-                chat_id=cfg.TELEGRAM_BOT_OWNER_ID, text=f"ADMIN MESSAGE ERROR\n{exc}"
+                chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                text=f"ADMIN MESSAGE\nTG ERROR\n{exc}",
             )
         cfg.logger.error(exc)
         traceback.print_exception(exc)
@@ -48,7 +49,7 @@ async def webhook_twitch(
         .get("broadcaster_user_id", "0")
     )
     message_id = headers.get("Twitch-Eventsub-Message-Id".lower(), "")
-    cfg.logger.info(f"{message_id=} {streamer_id=} {event_type=}")
+    cfg.logger.info(f"Event {message_id=} {streamer_id=} {event_type=}")
 
     if event_type == "webhook_callback_verification":
         return Response(

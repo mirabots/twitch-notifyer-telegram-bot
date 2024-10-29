@@ -31,7 +31,7 @@ async def _auth() -> None:
             )
 
 
-async def _get_streamer_id(streamer_name: str) -> httpx.Response:
+async def _get_streamers_info(params: dict[str, str | list[str]]) -> httpx.Response:
     async with httpx.AsyncClient() as ac:
         return await ac.get(
             "https://api.twitch.tv/helix/users",
@@ -39,31 +39,7 @@ async def _get_streamer_id(streamer_name: str) -> httpx.Response:
                 "Client-Id": cfg.TWITCH_CLIENT_ID,
                 "Authorization": f"Bearer {cfg.TWITCH_BEARER}",
             },
-            params={"login": streamer_name},
-        )
-
-
-async def _get_streamers_names(streamers_ids: list[str]) -> httpx.Response:
-    async with httpx.AsyncClient() as ac:
-        return await ac.get(
-            "https://api.twitch.tv/helix/users",
-            headers={
-                "Client-Id": cfg.TWITCH_CLIENT_ID,
-                "Authorization": f"Bearer {cfg.TWITCH_BEARER}",
-            },
-            params={"id": streamers_ids},
-        )
-
-
-async def _get_streamer_picture(streamer_id: str) -> httpx.Response:
-    async with httpx.AsyncClient() as ac:
-        return await ac.get(
-            "https://api.twitch.tv/helix/users",
-            headers={
-                "Client-Id": cfg.TWITCH_CLIENT_ID,
-                "Authorization": f"Bearer {cfg.TWITCH_BEARER}",
-            },
-            params={"id": streamer_id},
+            params=params,
         )
 
 

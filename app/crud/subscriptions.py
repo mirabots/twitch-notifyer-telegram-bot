@@ -52,12 +52,18 @@ async def get_subscribed_chats(streamer_id: str) -> list[dict[str, int | str]]:
         ]
 
 
-async def get_subscriptions(chat_id: int) -> list[str]:
+async def get_subscribed_streames(chat_id: int) -> dict[str, str]:
     async with async_session() as session, session.begin():
         db_subscriptions = await session.scalars(
-            select(Subscriptions).where(Subscriptions.chat_id == chat_id)
+            select(Streamers)
+            .select_from(
+                join(
+                    Streamers, Subscriptions, Streamers.id == Subscriptions.streamer_id
+                )
+            )
+            .where(Subscriptions.chat_id == chat_id)
         )
-        return [streamer.streamer_id for streamer in db_subscriptions]
+        return {streamer.id: streamer.name for streamer in db_subscriptions}
 
 
 async def remove_unsubscribed_streamers() -> list[str]:
@@ -89,7 +95,7 @@ async def change_template(chat_id: int, streamer_id: str, new_template: str) -> 
         )
 
 
-async def get_subscribed_users(streamer_id: str) -> list[int]:
+async def get_subscribed_users(streamer_id: str) -> set[int]:
     async with async_session() as session, session.begin():
         chats = await session.scalars(
             select(Chats)
@@ -131,7 +137,7 @@ async def change_picture_mode(
         )
 
 
-async def get_user_subscription_count(user_id: int) -> tuple[int, int]:
+async def get_user_subscription_count(user_id: int) -> int:
     async with async_session() as session, session.begin():
         (subs_count,) = (
             await session.execute(

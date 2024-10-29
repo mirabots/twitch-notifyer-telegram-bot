@@ -129,14 +129,13 @@ async def subscriptions_handler(
         await callback.message.edit_text(
             text=f"Subscriptions list\n'{chat_name}' choosen", reply_markup=None
         )
-        streamers = await crud_subs.get_subscriptions(callback_data.id)
+        streamers = await crud_subs.get_subscribed_streames(callback_data.id)
         if not streamers:
             message_text = "No subscriptions"
         else:
-            streamers_with_names = await twitch.get_streamers_names(streamers)
-            message_text = f"Count: ({len(streamers_with_names)})\n● " + "\n● ".join(
+            message_text = f"Count: ({len(streamers)})\n● " + "\n● ".join(
                 sorted(
-                    list(streamers_with_names.values()),
+                    list(streamers.values()),
                     key=lambda name: name.lower(),
                 )
             )
@@ -186,12 +185,13 @@ async def subscribe_form(message: types.Message, state: FSMContext, bot: Bot) ->
     chat_id = state_data["chat_id"]
     await state.clear()
 
-    streamer_name = message.text.rstrip().lower()
-
-    streamer_id = await twitch.get_streamer_id(streamer_name)
-    if not streamer_id:
+    streamer_login = message.text.rstrip().lower()
+    streamer_info = await twitch.get_streamer_info(streamer_login)
+    if not streamer_info:
         await message.answer(text="No streamer with this name")
         return
+    streamer_id = streamer_info["id"]
+    streamer_name = streamer_info["name"]
 
     if (await crud_streamers.check_streamer(streamer_id)) == None:
         subscription_id = await twitch.subscribe_event(streamer_id, "stream.online")
@@ -221,14 +221,11 @@ async def unsubscribe_handler(
             text=f"Unsubscribe from stream notification\n'{chat_name}' choosen",
             reply_markup=None,
         )
-        streamers = await crud_subs.get_subscriptions(chat_id)
+        streamers = await crud_subs.get_subscribed_streames(chat_id)
         if not streamers:
             await callback.message.answer(text="No subscriptions", reply_markup=None)
         else:
-            streamers_with_names = await twitch.get_streamers_names(streamers)
-            main_keyboard = get_keyboard_streamers(
-                "unsub", streamers_with_names, chat_id
-            )
+            main_keyboard = get_keyboard_streamers("unsub", streamers, chat_id)
             main_keyboard.adjust(3)
             abort_keyboard = get_keyboard_abort(callback_data.action)
             main_keyboard.attach(abort_keyboard)
@@ -274,14 +271,11 @@ async def template_handler(
             text=f"Change notification template\n'{chat_name}' choosen",
             reply_markup=None,
         )
-        streamers = await crud_subs.get_subscriptions(chat_id)
+        streamers = await crud_subs.get_subscribed_streames(chat_id)
         if not streamers:
             await callback.message.answer(text="No subscriptions", reply_markup=None)
         else:
-            streamers_with_names = await twitch.get_streamers_names(streamers)
-            main_keyboard = get_keyboard_streamers(
-                "tmplt", streamers_with_names, chat_id
-            )
+            main_keyboard = get_keyboard_streamers("tmplt", streamers, chat_id)
             main_keyboard.adjust(3)
             abort_keyboard = get_keyboard_abort(callback_data.action)
             main_keyboard.attach(abort_keyboard)
@@ -380,14 +374,11 @@ async def picture_handler(
             text=f"Change notification picture mode\n'{chat_name}' choosen",
             reply_markup=None,
         )
-        streamers = await crud_subs.get_subscriptions(chat_id)
+        streamers = await crud_subs.get_subscribed_streames(chat_id)
         if not streamers:
             await callback.message.answer(text="No subscriptions", reply_markup=None)
         else:
-            streamers_with_names = await twitch.get_streamers_names(streamers)
-            main_keyboard = get_keyboard_streamers(
-                "pctr", streamers_with_names, chat_id
-            )
+            main_keyboard = get_keyboard_streamers("pctr", streamers, chat_id)
             main_keyboard.adjust(3)
             abort_keyboard = get_keyboard_abort(callback_data.action)
             main_keyboard.attach(abort_keyboard)
@@ -476,14 +467,11 @@ async def notification_test_handler(
         await callback.message.edit_text(
             text=f"Test notification\n'{chat_name}' choosen", reply_markup=None
         )
-        streamers = await crud_subs.get_subscriptions(chat_id)
+        streamers = await crud_subs.get_subscribed_streames(chat_id)
         if not streamers:
             await callback.message.answer(text="No subscriptions", reply_markup=None)
         else:
-            streamers_with_names = await twitch.get_streamers_names(streamers)
-            main_keyboard = get_keyboard_streamers(
-                "ntfctn", streamers_with_names, chat_id
-            )
+            main_keyboard = get_keyboard_streamers("ntfctn", streamers, chat_id)
             main_keyboard.adjust(3)
             abort_keyboard = get_keyboard_abort(callback_data.action)
             main_keyboard.attach(abort_keyboard)
