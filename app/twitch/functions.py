@@ -1,9 +1,8 @@
 from collections.abc import Awaitable, Callable
 
+from common.config import cfg
 from httpx import Response
-
-from app.common.config import cfg
-from app.twitch.api import (
+from twitch.api import (
     _auth,
     _get_channel_info,
     _get_costs,
@@ -43,7 +42,6 @@ async def get_streamer_info(streamer_login: str) -> dict[str, str]:
 
 
 async def get_streamers_names(streamers_ids: list[str]) -> dict[str, str]:
-    correct_get = True
     result = {}
     slice_size = 100
     while streamers_ids:
@@ -54,8 +52,7 @@ async def get_streamers_names(streamers_ids: list[str]) -> dict[str, str]:
 
         answer_json = answer.json()
         if not answer_json.get("data"):
-            correct_get = False
-            break
+            return {}
         else:
             result.update(
                 {
@@ -65,8 +62,6 @@ async def get_streamers_names(streamers_ids: list[str]) -> dict[str, str]:
             )
         del streamers_ids[:slice_size]
 
-    if not correct_get:
-        return {}
     return result
 
 

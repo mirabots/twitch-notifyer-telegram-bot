@@ -1,9 +1,8 @@
 from typing import Any, Awaitable, Callable, Dict
 
 from aiogram import BaseMiddleware, types
-
-from app.common.config import cfg
-from app.telegram.commands import COMMANDS_ADMIN
+from common.config import cfg
+from telegram.commands import COMMANDS_ADMIN
 
 
 class ActiveBotMiddleware(BaseMiddleware):

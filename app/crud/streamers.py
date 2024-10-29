@@ -1,7 +1,6 @@
+from db.common import async_session
+from db.models import Streamers
 from sqlalchemy import delete, insert, select, update
-
-from app.db.common import async_session
-from app.db.models import Streamers
 
 
 async def get_all_streamers() -> dict[str, str]:

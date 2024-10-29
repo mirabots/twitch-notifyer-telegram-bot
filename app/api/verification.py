@@ -1,10 +1,9 @@
 import hashlib
 import hmac
 
+from common.config import cfg
 from litestar import Request
 from litestar.exceptions import HTTPException
-
-from app.common.config import cfg
 
 
 def verify_telegram_secret(headers: dict[str, str]) -> None:

@@ -1,7 +1,6 @@
 from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-
-from app.telegram.utils.callbacks import (
+from telegram.utils.callbacks import (
     CallbackAbort,
     CallbackChooseChat,
     CallbackChooseStreamer,

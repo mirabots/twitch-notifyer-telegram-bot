@@ -4,12 +4,11 @@ from string import Template
 
 from aiogram import types
 from aiogram.utils.formatting import Bold, Text
-
-from app.common.config import cfg
-from app.crud import streamers as crud_streamers
-from app.crud import subscriptions as crud_subs
-from app.telegram.bot import bot
-from app.twitch import functions as twitch
+from common.config import cfg
+from crud import streamers as crud_streamers
+from crud import subscriptions as crud_subs
+from telegram.bot import bot
+from twitch import functions as twitch
 
 
 async def send_notifications_to_chats(event: dict, message_id: str) -> None:

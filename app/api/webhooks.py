@@ -2,14 +2,13 @@ import traceback
 from typing import Any
 
 from aiogram import types
+from api.tasks import revoke_subscriptions, send_notifications_to_chats
+from api.verification import verify_telegram_secret, verify_twitch_secret
+from common.config import cfg
 from litestar import Request, Response, Router, post
 from litestar.background_tasks import BackgroundTask
 from litestar.status_codes import HTTP_200_OK, HTTP_204_NO_CONTENT
-
-from app.api.tasks import revoke_subscriptions, send_notifications_to_chats
-from app.api.verification import verify_telegram_secret, verify_twitch_secret
-from app.common.config import cfg
-from app.telegram.bot import bot, dp
+from telegram.bot import bot, dp
 
 
 @post("/webhooks/telegram")

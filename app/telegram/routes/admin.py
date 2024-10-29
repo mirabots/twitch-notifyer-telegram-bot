@@ -7,15 +7,14 @@ from aiogram import Bot, F, Router, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-
-from app.common.config import cfg
-from app.crud import admin as crud_admin
-from app.crud import chats as crud_chats
-from app.crud import streamers as crud_streamers
-from app.crud import subscriptions as crud_subs
-from app.crud import users as crud_users
-from app.telegram.commands import COMMANDS_ADMIN
-from app.telegram.utils.callbacks import (
+from common.config import cfg
+from crud import admin as crud_admin
+from crud import chats as crud_chats
+from crud import streamers as crud_streamers
+from crud import subscriptions as crud_subs
+from crud import users as crud_users
+from telegram.commands import COMMANDS_ADMIN
+from telegram.utils.callbacks import (
     CallbackChooseUser,
     CallbackDump,
     CallbackLimitDefault,
@@ -23,13 +22,13 @@ from app.telegram.utils.callbacks import (
     CallbackUsersAction,
     get_choosed_callback_text,
 )
-from app.telegram.utils.forms import (
+from telegram.utils.forms import (
     FormDump,
     FormLimitDefault,
     FormUserLimit,
     FromUserRename,
 )
-from app.telegram.utils.keyboards import (
+from telegram.utils.keyboards import (
     get_keyboard_abort,
     get_keyboard_dump,
     get_keyboard_limit_default,
@@ -37,7 +36,7 @@ from app.telegram.utils.keyboards import (
     get_keyboard_users,
     get_keyboard_users_actions,
 )
-from app.twitch import functions as twitch
+from twitch import functions as twitch
 
 router = Router()
 

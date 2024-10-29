@@ -1,8 +1,7 @@
 import sys
 
 from aiogram import Bot, Dispatcher
-
-from app.common.config import cfg
+from common.config import cfg
 
 try:
     bot = Bot(token=cfg.TELEGRAM_TOKEN)

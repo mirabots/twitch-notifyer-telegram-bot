@@ -1,9 +1,8 @@
 from datetime import datetime, timezone
 
 import httpx
-
-from app.common.config import cfg
-from app.telegram.bot import bot
+from common.config import cfg
+from telegram.bot import bot
 
 
 async def _auth() -> None:

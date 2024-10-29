@@ -1,7 +1,6 @@
+from db.common import async_session
+from db.models import Chats, Streamers, Subscriptions
 from sqlalchemy import delete, func, insert, join, select, update
-
-from app.db.common import async_session
-from app.db.models import Chats, Streamers, Subscriptions
 
 
 async def subscribe_to_streamer(chat_id: int, streamer_id: str) -> bool:

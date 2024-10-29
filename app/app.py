@@ -2,25 +2,24 @@ import traceback
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from api.webhooks import router as litestar_router
+from common.config import cfg
+from crud.streamers import get_all_streamers, update_streamer_name
+from crud.users import add_user, get_users, update_user
+from db.common import _engine, check_db
 from litestar import Litestar, Request, Response
 from litestar.status_codes import HTTP_500_INTERNAL_SERVER_ERROR
-
-from app.api.webhooks import router as litestar_router
-from app.common.config import cfg
-from app.crud.streamers import get_all_streamers, update_streamer_name
-from app.crud.users import add_user, get_users, update_user
-from app.db.common import _engine, check_db
-from app.telegram.bot import bot, dp
-from app.telegram.commands import COMMANDS
-from app.telegram.middlewares import (
+from telegram.bot import bot, dp
+from telegram.commands import COMMANDS
+from telegram.middlewares import (
     ActiveBotMiddleware,
     AdminMiddleware,
     AuthChatMiddleware,
 )
-from app.telegram.routes.admin import router as telegram_router_admin
-from app.telegram.routes.base import router as telegram_router_base
-from app.telegram.routes.subscriptions import router as telegram_router_subscriptions
-from app.twitch.functions import get_streamers_names
+from telegram.routes.admin import router as telegram_router_admin
+from telegram.routes.base import router as telegram_router_base
+from telegram.routes.subscriptions import router as telegram_router_subscriptions
+from twitch.functions import get_streamers_names
 
 
 @asynccontextmanager

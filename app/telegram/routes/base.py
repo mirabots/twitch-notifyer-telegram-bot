@@ -11,13 +11,12 @@ from aiogram.filters import (
 )
 from aiogram.fsm.context import FSMContext
 from aiogram.utils import formatting
-
-from app.common.config import cfg
-from app.crud import chats as crud_chats
-from app.crud import subscriptions as crud_subs
-from app.crud import users as crud_users
-from app.telegram.utils.callbacks import CallbackAbort
-from app.twitch import functions as twitch
+from common.config import cfg
+from crud import chats as crud_chats
+from crud import subscriptions as crud_subs
+from crud import users as crud_users
+from telegram.utils.callbacks import CallbackAbort
+from twitch import functions as twitch
 
 router = Router()
 

@@ -1,8 +1,7 @@
 import sys
 
 import uvicorn
-
-from app.common.utils import get_args
+from common.utils import get_args
 
 if __name__ == "__main__":
     args = get_args()
@@ -17,7 +16,7 @@ if __name__ == "__main__":
 
     try:
         uvicorn.run(
-            "app.app:app",
+            "app:app",
             host=args.host,
             port=args.port,
             proxy_headers=True,

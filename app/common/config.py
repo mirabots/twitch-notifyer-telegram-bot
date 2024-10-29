@@ -7,8 +7,7 @@ import httpx
 import requests
 import yaml
 from aiofile import async_open
-
-from app.common.utils import (
+from common.utils import (
     disable_unnecessary_loggers,
     generate_code,
     get_args,

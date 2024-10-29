@@ -7,27 +7,26 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils import formatting
-
-from app.common.config import cfg
-from app.crud import chats as crud_chats
-from app.crud import streamers as crud_streamers
-from app.crud import subscriptions as crud_subs
-from app.telegram.utils.callbacks import (
+from common.config import cfg
+from crud import chats as crud_chats
+from crud import streamers as crud_streamers
+from crud import subscriptions as crud_subs
+from telegram.utils.callbacks import (
     CallbackChooseChat,
     CallbackChooseStreamer,
     CallbackDefault,
     CallbackPicture,
     get_choosed_callback_text,
 )
-from app.telegram.utils.forms import FormChangeTemplate, FormSubscribe
-from app.telegram.utils.keyboards import (
+from telegram.utils.forms import FormChangeTemplate, FormSubscribe
+from telegram.utils.keyboards import (
     get_keyboard_abort,
     get_keyboard_chats,
     get_keyboard_default,
     get_keyboard_picture,
     get_keyboard_streamers,
 )
-from app.twitch import functions as twitch
+from twitch import functions as twitch
 
 router = Router()
 

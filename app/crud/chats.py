@@ -1,7 +1,6 @@
+from db.common import async_session
+from db.models import Chats, Subscriptions
 from sqlalchemy import delete, insert, select
-
-from app.db.common import async_session
-from app.db.models import Chats, Subscriptions
 
 
 async def chat_exists(chat_id: int) -> bool:

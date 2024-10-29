@@ -1,10 +1,9 @@
 import sys
 from typing import Any
 
+from common.config import cfg
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.sql import text
-
-from app.common.config import cfg
 
 _engine = create_async_engine(cfg.DB_CONNECTION_STRING)
 async_session = async_sessionmaker(_engine, expire_on_commit=False)

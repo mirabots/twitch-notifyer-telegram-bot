@@ -1,7 +1,6 @@
+from db.common import async_session
+from db.models import Users
 from sqlalchemy import delete, insert, select, update
-
-from app.db.common import async_session
-from app.db.models import Users
 
 
 async def get_users() -> dict[int, dict[str, int | str | None]]:

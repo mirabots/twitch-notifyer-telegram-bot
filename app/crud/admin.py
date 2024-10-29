@@ -1,9 +1,8 @@
 from typing import Any
 
+from db.common import async_session, get_model_dict
+from db.models import Chats, Streamers, Subscriptions, Users
 from sqlalchemy import delete, insert, select
-
-from app.db.common import async_session, get_model_dict
-from app.db.models import Chats, Streamers, Subscriptions, Users
 
 
 async def create_dump() -> dict[str, list[dict[str, Any]]]:
