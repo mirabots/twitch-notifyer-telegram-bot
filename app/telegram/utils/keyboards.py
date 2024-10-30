@@ -62,10 +62,15 @@ def get_keyboard_default(
     return keyboard
 
 
-def get_keyboard_picture() -> InlineKeyboardBuilder:
+def get_keyboard_picture(streamer_id: str, chat_id: int) -> InlineKeyboardBuilder:
     keyboard = InlineKeyboardBuilder()
-    for id, choice in enumerate(("Stream start screen", "Disabled")):
-        keyboard.button(text=choice, callback_data=CallbackPicture(choice_id=id))
+    for id, choice in enumerate(("Stream start screenshot", "Own pic", "Disabled")):
+        keyboard.button(
+            text=choice,
+            callback_data=CallbackPicture(
+                choice_id=id, streamer_id=streamer_id, chat_id=chat_id
+            ),
+        )
     return keyboard
 
 

@@ -46,6 +46,7 @@ async def get_subscribed_chats(streamer_id: str) -> list[dict[str, int | str]]:
                 "id": sub.chat_id,
                 "template": sub.message_template,
                 "picture_mode": sub.picture_mode,
+                "picture_id": sub.picture_id,
             }
             for sub in db_subscriptions
         ]
@@ -123,7 +124,7 @@ async def get_current_picture_mode(chat_id: int, streamer_id: str) -> str:
 
 
 async def change_picture_mode(
-    chat_id: int, streamer_id: str, picture_mode: str
+    chat_id: int, streamer_id: str, picture_mode: str, picture_id: str | None = None
 ) -> None:
     async with async_session() as session, session.begin():
         await session.execute(
@@ -132,7 +133,7 @@ async def change_picture_mode(
                 Subscriptions.chat_id == chat_id,
                 Subscriptions.streamer_id == streamer_id,
             )
-            .values(picture_mode=picture_mode)
+            .values(picture_mode=picture_mode, picture_id=picture_id)
         )
 
 

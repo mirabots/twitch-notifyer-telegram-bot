@@ -29,7 +29,7 @@ def upgrade() -> None:
         schema="tntb",
     )
     conn.execute(
-        sa.text("UPDATE tntb.subscriptions SET picture_mode='Stream start screen';")
+        sa.text("UPDATE tntb.subscriptions SET picture_mode='Stream start screenshot';")
     )
     op.alter_column(
         "subscriptions",

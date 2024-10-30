@@ -23,3 +23,7 @@ class FromUserRename(StatesGroup):
 
 class FormDump(StatesGroup):
     dump = State()
+
+
+class FormPicture(StatesGroup):
+    new_picture = State()

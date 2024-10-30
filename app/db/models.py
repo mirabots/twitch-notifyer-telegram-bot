@@ -37,3 +37,4 @@ class Subscriptions(Base):
     streamer_id: Mapped[str] = mapped_column(primary_key=True)
     message_template: Mapped[str] = mapped_column(Text, nullable=True)
     picture_mode: Mapped[str] = mapped_column(nullable=False)
+    picture_id: Mapped[str] = mapped_column(nullable=True)

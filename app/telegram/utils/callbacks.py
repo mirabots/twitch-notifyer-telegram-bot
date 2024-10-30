@@ -31,6 +31,8 @@ class CallbackDefault(CallbackData, prefix="dflt"):
 
 class CallbackPicture(CallbackData, prefix="pctr"):
     choice_id: int
+    streamer_id: str
+    chat_id: int
 
 
 class CallbackUsersAction(CallbackData, prefix="usrsact"):

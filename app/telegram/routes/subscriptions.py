@@ -18,7 +18,7 @@ from telegram.utils.callbacks import (
     CallbackPicture,
     get_choosed_callback_text,
 )
-from telegram.utils.forms import FormChangeTemplate, FormSubscribe
+from telegram.utils.forms import FormChangeTemplate, FormPicture, FormSubscribe
 from telegram.utils.keyboards import (
     get_keyboard_abort,
     get_keyboard_chats,
@@ -187,7 +187,8 @@ async def subscribe_form(message: types.Message, state: FSMContext, bot: Bot) ->
     streamer_login = message.text.rstrip().lower()
     streamer_info = await twitch.get_streamer_info(streamer_login)
     if not streamer_info:
-        await message.answer(text="No streamer with this name")
+        with suppress(TelegramBadRequest):
+            await message.answer(text="No streamer with this name")
         return
     streamer_id = streamer_info["id"]
     streamer_name = streamer_info["name"]
@@ -195,7 +196,8 @@ async def subscribe_form(message: types.Message, state: FSMContext, bot: Bot) ->
     if (await crud_streamers.check_streamer(streamer_id)) == None:
         subscription_id = await twitch.subscribe_event(streamer_id, "stream.online")
         if not subscription_id:
-            await message.answer(text="Subscription error from twitch")
+            with suppress(TelegramBadRequest):
+                await message.answer(text="Subscription error from twitch")
             return
         await crud_streamers.add_streamer(streamer_id, streamer_name, subscription_id)
 
@@ -203,7 +205,8 @@ async def subscribe_form(message: types.Message, state: FSMContext, bot: Bot) ->
     message_text = "Subscribed for notifications"
     if not newly_subbed:
         message_text = "Already subscribed!"
-    await message.answer(text=message_text)
+    with suppress(TelegramBadRequest):
+        await message.answer(text=message_text)
 
 
 @router.callback_query(CallbackChooseChat.filter(F.action == "unsub"))
@@ -339,7 +342,8 @@ async def template_streamer_form(
     await state.clear()
 
     await crud_subs.change_template(chat_id, streamer_id, message.text.rstrip())
-    await message.answer(text="New template was set")
+    with suppress(TelegramBadRequest):
+        await message.answer(text="New template was set")
 
 
 @router.callback_query(CallbackDefault.filter(F.action == "tmplt"))
@@ -392,65 +396,103 @@ async def picture_handler(
 async def picture_streamer_handler(
     callback: types.CallbackQuery,
     callback_data: CallbackChooseStreamer,
-    state: FSMContext,
 ):
     streamer_name = get_choosed_callback_text(
         callback.message.reply_markup.inline_keyboard, callback.data
     )
+    streamer_id = callback_data.streamer_id
+    chat_id = callback_data.chat_id
 
     with suppress(TelegramBadRequest):
         current_picture_mode = await crud_subs.get_current_picture_mode(
-            callback_data.chat_id, callback_data.streamer_id
+            chat_id, streamer_id
         )
 
         await callback.message.edit_text(
             text=f"'{streamer_name}' choosen", reply_markup=None
         )
-        main_keyboard = get_keyboard_picture()
+        main_keyboard = get_keyboard_picture(streamer_id, chat_id)
         abort_keyboard = get_keyboard_abort(callback_data.action)
         main_keyboard.attach(abort_keyboard)
-        sended_message = await callback.message.answer(
+        await callback.message.answer(
             text=f"Current mode: '{current_picture_mode}'",
             reply_markup=main_keyboard.as_markup(),
-        )
-
-        await state.set_data(
-            {
-                "chat_id": callback_data.chat_id,
-                "streamer_id": callback_data.streamer_id,
-                "outgoing_form_message_id": sended_message.message_id,
-            }
         )
 
 
 @router.callback_query(CallbackPicture.filter())
 async def picture_streamer_mode_handler(
     callback: types.CallbackQuery,
+    callback_data: CallbackPicture,
     state: FSMContext,
-    bot: Bot,
 ) -> None:
     picture_mode = get_choosed_callback_text(
         callback.message.reply_markup.inline_keyboard, callback.data
     )
+    streamer_id = callback_data.streamer_id
+    chat_id = callback_data.chat_id
+
+    with suppress(TelegramBadRequest):
+        await callback.message.edit_reply_markup(reply_markup=None)
+
+        if picture_mode == "Own pic":
+            abort_keyboard = get_keyboard_abort("pctr")
+            sended_message = await callback.message.answer(
+                text="Send picture in landscape mode and at least 1000px width:",
+                reply_markup=abort_keyboard.as_markup(),
+            )
+            await state.set_data(
+                {
+                    "chat_id": chat_id,
+                    "streamer_id": streamer_id,
+                    "outgoing_form_message_id": sended_message.message_id,
+                }
+            )
+            await state.set_state(FormPicture.new_picture)
+        else:
+            await crud_subs.change_picture_mode(chat_id, streamer_id, picture_mode)
+            await callback.message.answer(text=f"New mode ('{picture_mode}') was set")
+
+
+@router.message(FormPicture.new_picture)
+async def picture_streamer_form(
+    message: types.Message, state: FSMContext, bot: Bot
+) -> None:
     state_data = await state.get_data()
     outgoing_form_message_id = state_data["outgoing_form_message_id"]
 
     with suppress(TelegramBadRequest):
         await bot.edit_message_reply_markup(
-            chat_id=callback.from_user.id,
+            chat_id=message.from_user.id,
             message_id=outgoing_form_message_id,
             reply_markup=None,
         )
 
-        chat_id = state_data["chat_id"]
-        streamer_id = state_data["streamer_id"]
-        if picture_mode == "New picture":
-            pass
-        else:
-            await state.clear()
+    chat_id = state_data["chat_id"]
+    streamer_id = state_data["streamer_id"]
+    await state.clear()
 
-            await crud_subs.change_picture_mode(chat_id, streamer_id, picture_mode)
-            await callback.message.answer(text=f"New mode ('{picture_mode}') was set")
+    message_text = "Own picture was set"
+    if not message.photo:
+        message_text = "No picture was send\nNo changes"
+    else:
+        orig_photo = types.PhotoSize(
+            file_id="0", file_unique_id="0", width=0, height=0, file_size=0
+        )
+        for photo in message.photo:
+            if photo.file_size > orig_photo.file_size:
+                orig_photo = photo
+
+        if orig_photo.width < 1000:
+            message_text = f"Picture is small ({orig_photo.width}px width)\nNo changes"
+        elif orig_photo.width < orig_photo.height:
+            message_text = "Picture is not in landscape mode\nNo changes"
+        else:
+            await crud_subs.change_picture_mode(
+                chat_id, streamer_id, "Own pic", orig_photo.file_id
+            )
+    with suppress(TelegramBadRequest):
+        await message.answer(text=message_text)
 
 
 @router.callback_query(CallbackChooseChat.filter(F.action == "ntfctn"))
@@ -504,6 +546,7 @@ async def notification_test_message_handler(
         subscription_info = await crud_subs.get_subscription(chat_id, streamer_id)
         sub_template = subscription_info.message_template
         sub_picture_mode = subscription_info.picture_mode
+        sub_picture_id = subscription_info.picture_id
 
         stream_info = await twitch.get_channel_info(streamer_id)
         stream_info["thumbnail_url"] = (
@@ -545,6 +588,12 @@ async def notification_test_message_handler(
 
             await callback.message.answer_photo(
                 photo=stream_picture,
+                caption=message_text,
+                caption_entities=message_entities,
+            )
+        elif sub_picture_mode == "Own pic":
+            await callback.message.answer_photo(
+                photo=sub_picture_id,
                 caption=message_text,
                 caption_entities=message_entities,
             )

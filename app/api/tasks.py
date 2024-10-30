@@ -106,6 +106,13 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                     for photo in sended_message.photo:
                         if photo.file_size > file_size:
                             stream_picture_id = photo.file_id
+            elif chat["picture_mode"] == "Own pic":
+                await bot.send_photo(
+                    chat_id=chat["id"],
+                    photo=chat["picture_id"],
+                    caption=message_text,
+                    caption_entities=message_entities,
+                )
             else:
                 pass
     except Exception as exc:
