@@ -1,0 +1,38 @@
+name: Restart app
+run-name: Restart app at ${{ inputs.target }} env
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Environment"
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - test
+          - prod
+
+env:
+  TNTB_NAME: tntb
+  TNTB_DOCKER_REGISTRY: ghcr.io
+
+jobs:
+  stop:
+    runs-on: ubuntu-latest
+    name: Restart app
+    steps:
+      - name: Restart
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          TNTB_ENV: ${{ inputs.target }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: |
+            echo "-------- Try to restart ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }} container"
+            docker restart ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}
