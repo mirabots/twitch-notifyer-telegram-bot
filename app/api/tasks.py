@@ -59,7 +59,7 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
         if stream_details:
             stream_details += "\n"
 
-        stream_picture = None
+        stream_picture_id = None
 
         chats = await crud_subs.get_subscribed_chats(streamer_id)
         cfg.logger.info(f"Chats: {[chat['id'] for chat in chats]}")
@@ -83,7 +83,8 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                     link_preview_options=types.LinkPreviewOptions(is_disabled=True),
                 )
             elif chat["picture_mode"] == "Stream start screenshot":
-                if stream_picture == None:
+                stream_picture = None
+                if stream_picture_id == None:
                     utc_now = datetime.now(tz=timezone.utc).strftime(
                         "%Y_%m_%d_%H_%M_%S"
                     )
@@ -92,15 +93,19 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                             width="1920", height="1080"
                         ),
                         filename=f"{streamer_login}_{utc_now}.jpg",
-                        bot=bot,
                     )
 
-                await bot.send_photo(
+                sended_message = await bot.send_photo(
                     chat_id=chat["id"],
-                    photo=stream_picture,
+                    photo=(stream_picture_id or stream_picture),
                     caption=message_text,
                     caption_entities=message_entities,
                 )
+                if stream_picture_id == None:
+                    file_size = 0
+                    for photo in sended_message.photo:
+                        if photo.file_size > file_size:
+                            stream_picture_id = photo.file_id
             else:
                 pass
     except Exception as exc:

@@ -129,36 +129,36 @@ class ConfigManager:
         if get_db:
             db_data = self.secrets_data.get(f"{self.ENV}/db")
             try:
-                self.DB_CONNECTION_STRING = db_data["connection string"]
+                self.DB_CONNECTION_STRING: str = db_data["connection string"]
             except Exception:
                 no_secrets.append(f"{self.ENV}/db")
 
         # domain
         domain_data = self.secrets_data.get(f"{self.ENV}/domain")
         try:
-            self.DOMAIN = domain_data["domain"]
+            self.DOMAIN: str = domain_data["domain"]
         except Exception:
             no_secrets.append(f"{self.ENV}/domain")
 
         # twitch
         twitch_data = self.secrets_data.get(f"{self.ENV}/twitch")
         try:
-            self.TWITCH_CLIENT_ID = twitch_data["client_id"]
-            self.TWITCH_CLIENT_SECRET = twitch_data["client_secret"]
-            self.TWITCH_SUBSCRIPTION_SECRET = twitch_data["subscription_secret"]
-            self.TWITCH_BEARER = "NONE"
+            self.TWITCH_CLIENT_ID: str = twitch_data["client_id"]
+            self.TWITCH_CLIENT_SECRET: str = twitch_data["client_secret"]
+            self.TWITCH_SUBSCRIPTION_SECRET: str = twitch_data["subscription_secret"]
+            self.TWITCH_BEARER: str = "NONE"
         except Exception:
             no_secrets.append(f"{self.ENV}/twitch")
 
         # telegram
         telegram_data = self.secrets_data.get(f"{self.ENV}/telegram")
         try:
-            self.TELEGRAM_BOT_OWNER_ID = telegram_data["owner_id"]
-            self.TELEGRAM_TOKEN = telegram_data["token"]
-            self.TELEGRAM_SECRET = telegram_data["secret"]
+            self.TELEGRAM_BOT_OWNER_ID: int = telegram_data["owner_id"]
+            self.TELEGRAM_TOKEN: str = telegram_data["token"]
+            self.TELEGRAM_SECRET: str = telegram_data["secret"]
             self.TELEGRAM_LIMIT_DEFAULT = int(telegram_data["limit_default"])
             self.TELEGRAM_INVITE_CODE = generate_code()
-            self.TELEGRAM_USERS = []
+            self.TELEGRAM_USERS: dict[int, dict[str, int | str | None]] = {}
         except Exception:
             no_secrets.append(f"{self.ENV}/telegram")
 

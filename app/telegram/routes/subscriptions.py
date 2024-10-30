@@ -483,7 +483,7 @@ async def notification_test_handler(
 
 @router.callback_query(CallbackChooseStreamer.filter(F.action == "ntfctn"))
 async def notification_test_message_handler(
-    callback: types.CallbackQuery, callback_data: CallbackChooseStreamer, bot: Bot
+    callback: types.CallbackQuery, callback_data: CallbackChooseStreamer
 ):
     streamer_name = get_choosed_callback_text(
         callback.message.reply_markup.inline_keyboard, callback.data
@@ -541,7 +541,6 @@ async def notification_test_message_handler(
             stream_picture = types.URLInputFile(
                 stream_info["thumbnail_url"].format(width="1920", height="1080"),
                 filename=f"{streamer_login}_{utc_now}.jpg",
-                bot=bot,
             )
 
             await callback.message.answer_photo(
