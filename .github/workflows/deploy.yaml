@@ -7,17 +7,18 @@ on:
       target:
         description: "Environment for deployment"
         required: true
-        default: 'test'
+        default: 'prod'
         type: choice
         options:
           - test
           - prod
       docker_port:
         description: "Port for running docker"
-        default: '8801'
+        default: '8802'
 
 env:
-  DOCKER_REGISTRY: ghcr.io
+  TNTB_NAME: tntb
+  TNTB_DOCKER_REGISTRY: ghcr.io
 
 jobs:
   build:
@@ -46,14 +47,14 @@ jobs:
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
-          registry: ${{ env.DOCKER_REGISTRY }}
+          registry: ${{ env.TNTB_DOCKER_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.PAT_GH }}
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ${{ env.DOCKER_REGISTRY }}/${{ steps.define_image_names.outputs.FULL_IMAGE_NAME }}:latest
+          tags: ${{ env.TNTB_DOCKER_REGISTRY }}/${{ steps.define_image_names.outputs.FULL_IMAGE_NAME }}:latest
 
   alembic:
     runs-on: ubuntu-latest
@@ -65,8 +66,8 @@ jobs:
           ref: ${{ github.ref_name }}
       - name: TAR code
         env:
-          B_ENV: ${{ inputs.target }}
-        run: tar -cvf tntb-${{ env.B_ENV }}.tar .
+          TNTB_ENV: ${{ inputs.target }}
+        run: tar -cvf ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}.tar .
       - name: Copy code to host
         uses: appleboy/scp-action@master
         with:
@@ -75,12 +76,12 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
-          source: "tntb-${{ inputs.target }}.tar"
+          source: "${{ env.TNTB_NAME }}-${{ inputs.target }}.tar"
           target: "~/builds"
       - name: Apply alembic
         uses: appleboy/ssh-action@v1.0.0
         env:
-          B_ENV: ${{ inputs.target }}
+          TNTB_ENV: ${{ inputs.target }}
           TNTB__DB_DSN: ${{ inputs.target == 'prod' && secrets.DB_DSN_TNTB_PROD || secrets.DB_DSN_TNTB_TEST }}
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -90,14 +91,14 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script_stop: true
           script: |
-            mkdir ~/builds/tntb-${{ env.B_ENV }}
-            tar -xf ~/builds/tntb-${{ env.B_ENV }}.tar -C ~/builds/tntb-${{ env.B_ENV }}/
-            cd ~/builds/tntb-${{ env.B_ENV }}/
+            mkdir ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}
+            tar -xf ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}.tar -C ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}/
+            cd ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}/
             export TNTB_DB_DSN=${{ env.TNTB__DB_DSN }}
             python3 -m alembic upgrade head
             cd ~
-            rm ~/builds/tntb-${{ env.B_ENV }}.tar
-            sudo rm -rf ~/builds/tntb-${{ env.B_ENV }}
+            rm ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}.tar
+            sudo rm -rf ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -107,7 +108,7 @@ jobs:
       - name: Deploy
         uses: appleboy/ssh-action@v1.0.0
         env:
-          B_ENV: ${{ inputs.target }}
+          TNTB_ENV: ${{ inputs.target }}
           TNTB_DEPLOY_FULL_IMAGE_NAME: ${{ needs.build.outputs.full_image_name }}
           TNTB_DEPLOY_PAT_GH: ${{ secrets.PAT_GH }}
           TNTB_DEPLOY_GH_LOGIN: ${{ github.actor }}
@@ -120,25 +121,25 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script_stop: true
           script: |
-            docker login ${{ env.DOCKER_REGISTRY }} -u ${{ env.TNTB_DEPLOY_GH_LOGIN }} -p ${{ env.TNTB_DEPLOY_PAT_GH }}
-            echo "-------- Try to stop tntb-${{ env.B_ENV }} container"
-            docker stop tntb-${{ env.B_ENV }} || true
-            echo "-------- Try to delete tntb-${{ env.B_ENV }} container"
-            docker container rm tntb-${{ env.B_ENV }} || true
+            docker login ${{ env.TNTB_DOCKER_REGISTRY }} -u ${{ env.TNTB_DEPLOY_GH_LOGIN }} -p ${{ env.TNTB_DEPLOY_PAT_GH }}
+            echo "-------- Try to stop ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }} container"
+            docker stop ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }} || true
+            echo "-------- Try to delete ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }} container"
+            docker container rm ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }} || true
             echo "-------- Try to delete ${{ env.TNTB_DEPLOY_FULL_IMAGE_NAME }} image"
-            docker rmi ${{ env.DOCKER_REGISTRY }}/${{ env.TNTB_DEPLOY_FULL_IMAGE_NAME }} || true
+            docker rmi ${{ env.TNTB_DOCKER_REGISTRY }}/${{ env.TNTB_DEPLOY_FULL_IMAGE_NAME }} || true
             echo "-------- Try to pull and run ${{ env.TNTB_DEPLOY_FULL_IMAGE_NAME }} image"
             docker run -d \
               -it \
-              --name tntb-${{ env.B_ENV }} \
+              --name ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }} \
               --restart always \
               --network=host \
               -e APP_HOST=127.0.0.1 \
               -e APP_PORT=${{ env.TNTB_DEPLOY_DOCKER_PORT }} \
-              -e APP_ENV=${{ env.B_ENV }} \
-              --mount type=bind,source=/home/${{ env.TNTB_DEPLOY_GH_LOGIN }}/deploy_configs/tntb-${{ env.B_ENV }}/config.yaml,target=/application/config/config.yaml \
-              ${{ env.DOCKER_REGISTRY }}/${{ env.TNTB_DEPLOY_FULL_IMAGE_NAME }}:latest
-            docker logout "${{ env.DOCKER_REGISTRY }}"
+              -e APP_ENV=${{ env.TNTB_ENV }} \
+              --mount type=bind,source=/home/${{ env.TNTB_DEPLOY_GH_LOGIN }}/deploy_configs/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}/config.yaml,target=/application/config/config.yaml \
+              ${{ env.TNTB_DOCKER_REGISTRY }}/${{ env.TNTB_DEPLOY_FULL_IMAGE_NAME }}:latest
+            docker logout "${{ env.TNTB_DOCKER_REGISTRY }}"
 
       - name: Delete old images
         uses: actions/delete-package-versions@v4
