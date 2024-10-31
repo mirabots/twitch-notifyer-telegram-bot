@@ -1,8 +1,19 @@
 # Twitch Notifyer Telegram Bot
 Bot will send you and your channels stream.online streamers notifications
 
+## Features:
+-   Subscribe for streamers stream.online notification in PM or/and channels
+-   Notification contain
+    -   Changable text description
+    -   Stream title and category
+    -   Picture
+        -   Stream start screenshot
+        -   Own picture
+        -   Disabled
+-   Testing notification view
+
 ## ToDo:
--   Set own picture for notification
+-   Changing localization
 -   Give channel admins manage notifications
 -   Ignore notification if stream tags or words in title
 -   Catch parallel commands usage

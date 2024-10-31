@@ -102,10 +102,12 @@ def get_keyboard_limit_default(name: str) -> InlineKeyboardBuilder:
     return keyboard
 
 
-def get_keyboard_user_limit() -> InlineKeyboardBuilder:
+def get_keyboard_user_limit(user_id: int) -> InlineKeyboardBuilder:
     keyboard = InlineKeyboardBuilder()
     for action in ("Unlim", "Default"):
-        keyboard.button(text=action, callback_data=CallbackUserLimit(action=action))
+        keyboard.button(
+            text=action, callback_data=CallbackUserLimit(action=action, user_id=user_id)
+        )
     return keyboard
 
 

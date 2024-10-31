@@ -10,7 +10,7 @@ class Users(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(BIGINT, primary_key=True, autoincrement=False)
-    limit: Mapped[str] = mapped_column(nullable=True)
+    limit: Mapped[int] = mapped_column(nullable=True)
     name: Mapped[str] = mapped_column(nullable=True)
 
 

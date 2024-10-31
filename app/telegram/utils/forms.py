@@ -27,3 +27,7 @@ class FormDump(StatesGroup):
 
 class FormPicture(StatesGroup):
     new_picture = State()
+
+
+class FormMessage(StatesGroup):
+    message = State()

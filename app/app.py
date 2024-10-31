@@ -1,7 +1,8 @@
 import traceback
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
+from aiogram.exceptions import TelegramBadRequest
 from api.webhooks import router as litestar_router
 from common.config import cfg
 from crud.streamers import get_all_streamers, update_streamer_name
@@ -70,7 +71,8 @@ async def lifespan_function(app: Litestar) -> AsyncGenerator[None, None]:
 
     # update streamers names
     streamers = await get_all_streamers()
-    cfg.logger.info("Updating streamers names")
+    if streamers:
+        cfg.logger.info("Updating streamers names")
     streamers_with_names = await get_streamers_names(list(streamers.keys()))
     for streamer_id, streamer_name in streamers.items():
         twitch_name = streamers_with_names.get(streamer_id, "")
@@ -83,9 +85,10 @@ async def lifespan_function(app: Litestar) -> AsyncGenerator[None, None]:
             await update_streamer_name(streamer_id, twitch_name)
 
     if cfg.ENV != "dev":
-        await bot.send_message(
-            chat_id=cfg.TELEGRAM_BOT_OWNER_ID, text="ADMIN MESSAGE\nBOT STARTED"
-        )
+        with suppress(TelegramBadRequest):
+            await bot.send_message(
+                chat_id=cfg.TELEGRAM_BOT_OWNER_ID, text="ADMIN MESSAGE\nBOT STARTED"
+            )
 
     try:
         yield
@@ -107,7 +110,6 @@ app = Litestar(
     [litestar_router],
     lifespan=[lifespan_function],
     logging_config=cfg.logging_config,
-    # debug=True,
     exception_handlers={
         HTTP_500_INTERNAL_SERVER_ERROR: internal_server_error_handler,
     },

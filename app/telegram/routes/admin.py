@@ -25,6 +25,7 @@ from telegram.utils.callbacks import (
 from telegram.utils.forms import (
     FormDump,
     FormLimitDefault,
+    FormMessage,
     FormUserLimit,
     FromUserRename,
 )
@@ -66,23 +67,21 @@ async def bot_active_handler(message: types.Message):
 
 @router.message(Command("secrets_reload"))
 async def secrets_reload_handler(message: types.Message):
+    message_text = "Reloaded"
     cfg.logger.info("Reloading secrets")
     error = await cfg.load_secrets_async()
     if error:
         cfg.logger.error(error)
-        with suppress(TelegramBadRequest):
-            await message.answer(text=error)
-            return
-
-    no_secrets = cfg.apply_secrets(get_db=False)
-    if no_secrets:
-        cfg.logger.error(f"No secrets found: {no_secrets}")
-        with suppress(TelegramBadRequest):
-            await message.answer(text=f"No secrets found:\n{str(no_secrets)}")
-            return
-    cfg.logger.info("Secrets were reloaded")
+        message_text = error
+    else:
+        no_secrets = cfg.apply_secrets(get_db=False)
+        if no_secrets:
+            cfg.logger.error(f"No secrets found: {no_secrets}")
+            message_text = f"No secrets found:\n{str(no_secrets)}"
+        else:
+            cfg.logger.info("Secrets were reloaded")
     with suppress(TelegramBadRequest):
-        await message.answer(text="Reloaded")
+        await message.answer(text=message_text)
 
 
 @router.message(Command("users"))
@@ -102,11 +101,11 @@ async def users_handler(message: types.Message, bot: Bot):
             message_text = message_text.rstrip(", ")
             message_text += "]"
 
+    main_keyboard = get_keyboard_users_actions()
+    main_keyboard.adjust(3)
+    abort_keyboard = get_keyboard_abort("usrs", "End")
+    main_keyboard.attach(abort_keyboard)
     with suppress(TelegramBadRequest):
-        main_keyboard = get_keyboard_users_actions()
-        main_keyboard.adjust(3)
-        abort_keyboard = get_keyboard_abort("usrs", "End")
-        main_keyboard.attach(abort_keyboard)
         await message.answer(text=message_text, reply_markup=main_keyboard.as_markup())
 
 
@@ -115,9 +114,10 @@ async def user_invite_handler(callback: types.CallbackQuery, bot: Bot):
     with suppress(TelegramBadRequest):
         await callback.message.edit_reply_markup(reply_markup=None)
 
-        bot_name = (await bot.me()).username
-        bot_join_link = f"https://t.me/{bot_name}?start={cfg.TELEGRAM_INVITE_CODE}"
+    bot_name = (await bot.me()).username
+    bot_join_link = f"https://t.me/{bot_name}?start={cfg.TELEGRAM_INVITE_CODE}"
 
+    with suppress(TelegramBadRequest):
         await callback.message.answer(
             text=f"Use this link for join bot:\n{bot_join_link}",
             link_preview_options=types.LinkPreviewOptions(is_disabled=True),
@@ -129,10 +129,11 @@ async def user_name_choose_handler(callback: types.CallbackQuery):
     with suppress(TelegramBadRequest):
         await callback.message.edit_reply_markup(reply_markup=None)
 
-        main_keyboard = get_keyboard_users(cfg.TELEGRAM_USERS, "usrsn")
-        main_keyboard.adjust(2)
-        abort_keyboard = get_keyboard_abort("usrn")
-        main_keyboard.attach(abort_keyboard)
+    main_keyboard = get_keyboard_users(cfg.TELEGRAM_USERS, "usrsn")
+    main_keyboard.adjust(2)
+    abort_keyboard = get_keyboard_abort("usrn")
+    main_keyboard.attach(abort_keyboard)
+    with suppress(TelegramBadRequest):
         await callback.message.answer(
             text="Choose user to remane:",
             reply_markup=main_keyboard.as_markup(),
@@ -152,7 +153,8 @@ async def user_name_handler(
             text=f"'{user_name}' choosen", reply_markup=None
         )
 
-        abort_keyboard = get_keyboard_abort("usrn")
+    abort_keyboard = get_keyboard_abort("usrn")
+    with suppress(TelegramBadRequest):
         sended_message = await callback.message.answer(
             text="Enter new user name:",
             reply_markup=abort_keyboard.as_markup(),
@@ -170,7 +172,7 @@ async def user_name_form(message: types.Message, state: FSMContext, bot: Bot) ->
     outgoing_form_message_id = state_data["outgoing_form_message_id"]
     with suppress(TelegramBadRequest):
         await bot.edit_message_reply_markup(
-            chat_id=message.from_user.id,
+            chat_id=message.chat.id,
             message_id=outgoing_form_message_id,
             reply_markup=None,
         )
@@ -190,10 +192,11 @@ async def user_remove_choose_handler(callback: types.CallbackQuery):
     with suppress(TelegramBadRequest):
         await callback.message.edit_reply_markup(reply_markup=None)
 
-        main_keyboard = get_keyboard_users(cfg.TELEGRAM_USERS, "usrsr")
-        main_keyboard.adjust(2)
-        abort_keyboard = get_keyboard_abort("usrr")
-        main_keyboard.attach(abort_keyboard)
+    main_keyboard = get_keyboard_users(cfg.TELEGRAM_USERS, "usrsr")
+    main_keyboard.adjust(2)
+    abort_keyboard = get_keyboard_abort("usrr")
+    main_keyboard.attach(abort_keyboard)
+    with suppress(TelegramBadRequest):
         await callback.message.answer(
             text="Choose user to remove:",
             reply_markup=main_keyboard.as_markup(),
@@ -241,18 +244,18 @@ async def user_remove_handler(
 
 @router.message(Command("limites"))
 async def limites_handler(message: types.Message):
-    with suppress(TelegramBadRequest):
-        limit_default_keyboard = get_keyboard_limit_default("Default value")
-        main_keyboard = get_keyboard_users(cfg.TELEGRAM_USERS, "usrsl")
-        main_keyboard.adjust(2)
-        abort_keyboard = get_keyboard_abort("usrsl", "End")
-        limit_default_keyboard.attach(main_keyboard)
-        limit_default_keyboard.attach(abort_keyboard)
+    limit_default_keyboard = get_keyboard_limit_default("Default value")
+    main_keyboard = get_keyboard_users(cfg.TELEGRAM_USERS, "usrsl")
+    main_keyboard.adjust(2)
+    abort_keyboard = get_keyboard_abort("usrsl", "End")
+    limit_default_keyboard.attach(main_keyboard)
+    limit_default_keyboard.attach(abort_keyboard)
 
-        message_text = (
-            f"Current default limit: {cfg.TELEGRAM_LIMIT_DEFAULT}"
-            "\nChange default or user's limit:"
-        )
+    message_text = (
+        f"Current default limit: {cfg.TELEGRAM_LIMIT_DEFAULT}"
+        "\nChange default or user's limit:"
+    )
+    with suppress(TelegramBadRequest):
         await message.answer(
             text=message_text,
             reply_markup=limit_default_keyboard.as_markup(),
@@ -267,7 +270,8 @@ async def limit_default_handler(callback: types.CallbackQuery, state: FSMContext
             reply_markup=None,
         )
 
-        abort_keyboard = get_keyboard_abort("usrsld")
+    abort_keyboard = get_keyboard_abort("usrsld")
+    with suppress(TelegramBadRequest):
         sended_message = await callback.message.answer(
             text="Enter new default limit value:",
             reply_markup=abort_keyboard.as_markup(),
@@ -289,7 +293,7 @@ async def limit_default_form(
     outgoing_form_message_id = state_data["outgoing_form_message_id"]
     with suppress(TelegramBadRequest):
         await bot.edit_message_reply_markup(
-            chat_id=message.from_user.id,
+            chat_id=message.chat.id,
             message_id=outgoing_form_message_id,
             reply_markup=None,
         )
@@ -323,24 +327,25 @@ async def user_limit_handler(
     )
     user_id = callback_data.user_id
 
+    subs_count = await crud_subs.get_user_subscription_count(user_id)
+
+    message_text = (
+        f"Current default limit: {cfg.TELEGRAM_LIMIT_DEFAULT}\n"
+        f"\nUser {user_name}:"
+        f"\n● limit: {cfg.TELEGRAM_USERS[user_id]['limit']}"
+        f"\n● subscriptions count: {subs_count}"
+    )
     with suppress(TelegramBadRequest):
-        subs_count = await crud_subs.get_user_subscription_count(user_id)
-
-        message_text = (
-            f"Current default limit: {cfg.TELEGRAM_LIMIT_DEFAULT}\n"
-            f"\nUser {user_name}:"
-            f"\n● limit: {cfg.TELEGRAM_USERS[user_id]['limit']}"
-            f"\n● subscriptions count: {subs_count}"
-        )
-
         await callback.message.edit_text(text=message_text, reply_markup=None)
-        if user_id == cfg.TELEGRAM_BOT_OWNER_ID:
-            return
 
-        main_keyboard = get_keyboard_user_limit()
-        main_keyboard.adjust(2)
-        abort_keyboard = get_keyboard_abort("usrl")
-        main_keyboard.attach(abort_keyboard)
+    if user_id == cfg.TELEGRAM_BOT_OWNER_ID:
+        return
+
+    main_keyboard = get_keyboard_user_limit(user_id)
+    main_keyboard.adjust(2)
+    abort_keyboard = get_keyboard_abort("usrl")
+    main_keyboard.attach(abort_keyboard)
+    with suppress(TelegramBadRequest):
         sended_message = await callback.message.answer(
             text="Enter new limit value:",
             reply_markup=main_keyboard.as_markup(),
@@ -359,10 +364,9 @@ async def user_limit_handler(
 async def user_limit_action_handler(
     callback: types.CallbackQuery, callback_data: CallbackUserLimit, state: FSMContext
 ):
-    state_data = await state.get_data()
     with suppress(TelegramBadRequest):
         await callback.message.edit_reply_markup(reply_markup=None)
-    user_id = copy(state_data["user_id"])
+    user_id = callback_data.user_id
     await state.clear()
 
     limit_action = callback_data.action
@@ -383,7 +387,7 @@ async def user_limit_form(message: types.Message, state: FSMContext, bot: Bot) -
     outgoing_form_message_id = state_data["outgoing_form_message_id"]
     with suppress(TelegramBadRequest):
         await bot.edit_message_reply_markup(
-            chat_id=message.from_user.id,
+            chat_id=message.chat.id,
             message_id=outgoing_form_message_id,
             reply_markup=None,
         )
@@ -419,30 +423,34 @@ async def streamers_handler(message: types.Message, bot: Bot):
                 text="Updating streamers names from twitch"
             )
 
-        streamers_with_names = await twitch.get_streamers_names(list(streamers.keys()))
-        for streamer_id, streamer_name in streamers.items():
-            twitch_name = streamers_with_names.get(streamer_id, "")
-            if streamer_name in ("-", None) or (
-                twitch_name != "" and streamer_name != twitch_name
-            ):
-                if not twitch_name:
-                    streamer_with_name = await twitch.get_streamers_names([streamer_id])
-                    twitch_name = streamer_with_name[streamer_id]
-                await crud_streamers.update_streamer_name(streamer_id, twitch_name)
-                streamers[streamer_id] = twitch_name
-
-        message_text = f"Streamers ({len(streamers)}):"
-        for streamer_name in sorted(
-            list(streamers.values()), key=lambda name: name.lower()
-        ):
-            message_text += f"\n● {streamer_name}"
-
-        with suppress(TelegramBadRequest):
-            await bot.edit_message_text(
-                chat_id=message.from_user.id,
-                message_id=sended_message.message_id,
-                text=message_text,
+            streamers_with_names = await twitch.get_streamers_names(
+                list(streamers.keys())
             )
+            for streamer_id, streamer_name in streamers.items():
+                twitch_name = streamers_with_names.get(streamer_id, "")
+                if streamer_name in ("-", None) or (
+                    twitch_name != "" and streamer_name != twitch_name
+                ):
+                    if not twitch_name:
+                        streamer_with_name = await twitch.get_streamers_names(
+                            [streamer_id]
+                        )
+                        twitch_name = streamer_with_name[streamer_id]
+                    await crud_streamers.update_streamer_name(streamer_id, twitch_name)
+                    streamers[streamer_id] = twitch_name
+
+            message_text = f"Streamers ({len(streamers)}):"
+            for streamer_name in sorted(
+                list(streamers.values()), key=lambda name: name.lower()
+            ):
+                message_text += f"\n● {streamer_name}"
+
+            with suppress(TelegramBadRequest):
+                await bot.edit_message_text(
+                    chat_id=message.chat.id,
+                    message_id=sended_message.message_id,
+                    text=message_text,
+                )
 
 
 @router.message(Command("costs"))
@@ -460,11 +468,11 @@ async def costs_handler(message: types.Message):
 
 @router.message(Command("dump"))
 async def dump_handler(message: types.Message):
+    main_keyboard = get_keyboard_dump()
+    main_keyboard.adjust(2)
+    abort_keyboard = get_keyboard_abort("dump")
+    main_keyboard.attach(abort_keyboard)
     with suppress(TelegramBadRequest):
-        main_keyboard = get_keyboard_dump()
-        main_keyboard.adjust(2)
-        abort_keyboard = get_keyboard_abort("dump")
-        main_keyboard.attach(abort_keyboard)
         await message.answer(
             text="Choose dump action:",
             reply_markup=main_keyboard.as_markup(),
@@ -476,22 +484,23 @@ async def dump_create_handler(callback: types.CallbackQuery):
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(text="Created dump:", reply_markup=None)
 
-        dump = await crud_admin.create_dump()
-        jsoned_payload = json.dumps(
-            dump, ensure_ascii=False, indent=4, separators=(",", ": ")
-        )
-        current_datetime = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
-        file = types.BufferedInputFile(
-            jsoned_payload.encode(), f"tntb_{cfg.ENV}_{current_datetime}.json"
-        )
+    dump = await crud_admin.create_dump()
+    jsoned_payload = json.dumps(
+        dump, ensure_ascii=False, indent=4, separators=(",", ": ")
+    )
+    current_datetime = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
+    file = types.BufferedInputFile(
+        jsoned_payload.encode(), f"tntb_{cfg.ENV}_{current_datetime}.json"
+    )
 
+    with suppress(TelegramBadRequest):
         await callback.message.answer_document(document=file)
 
 
 @router.callback_query(CallbackDump.filter(F.action == "Restore"))
 async def dump_restore_handler(callback: types.CallbackQuery, state: FSMContext):
+    abort_keyboard = get_keyboard_abort("dumpr")
     with suppress(TelegramBadRequest):
-        abort_keyboard = get_keyboard_abort("dumpr")
         sended_message = await callback.message.edit_text(
             text="Send json-file for restoring dump:",
             reply_markup=abort_keyboard.as_markup(),
@@ -508,7 +517,7 @@ async def dump_restore_form(
     outgoing_form_message_id = state_data["outgoing_form_message_id"]
     with suppress(TelegramBadRequest):
         await bot.edit_message_reply_markup(
-            chat_id=message.from_user.id,
+            chat_id=message.chat.id,
             message_id=outgoing_form_message_id,
             reply_markup=None,
         )
@@ -526,11 +535,73 @@ async def dump_restore_form(
         except Exception:
             message_text = "File is not json"
         if json_data:
-            await crud_admin.restore_dump(json_data)
-            # try:
-            #     await crud_admin.restore_dump(json_data)
-            # except Exception:
-            #     message_text = "Incorrect json data"
+            try:
+                await crud_admin.restore_dump(json_data)
+            except Exception:
+                message_text = "Incorrect json data"
 
     with suppress(TelegramBadRequest):
         await message.answer(text=message_text)
+
+
+@router.message(Command("message"))
+async def message_handler(message: types.Message, state: FSMContext):
+    abort_keyboard = get_keyboard_abort("mssg")
+    with suppress(TelegramBadRequest):
+        sended_message = await message.answer(
+            text="Send message to all users:", reply_markup=abort_keyboard.as_markup()
+        )
+
+        await state.set_data({"outgoing_form_message_id": sended_message.message_id})
+        await state.set_state(FormMessage.message)
+
+
+@router.message(FormMessage.message)
+async def message_form(message: types.Message, state: FSMContext, bot: Bot) -> None:
+    state_data = await state.get_data()
+    outgoing_form_message_id = state_data["outgoing_form_message_id"]
+    with suppress(TelegramBadRequest):
+        await bot.edit_message_reply_markup(
+            chat_id=message.chat.id,
+            message_id=outgoing_form_message_id,
+            reply_markup=None,
+        )
+    await state.clear()
+
+    message_text = message.text or message.caption or ""
+    message_entities = message.entities or message.caption_entities or None
+    picture_id = None
+    if message.photo:
+        file_size = 0
+        for photo in message.photo:
+            if photo.file_size > file_size:
+                picture_id = photo.file_id
+
+    admin_message = "Message was sended"
+
+    if not (message_text or picture_id):
+        admin_message = "Can't send empty message"
+    else:
+        for user_id in cfg.TELEGRAM_USERS:
+            if user_id != cfg.TELEGRAM_BOT_OWNER_ID:
+                if picture_id:
+                    with suppress(TelegramBadRequest):
+                        await bot.send_photo(
+                            chat_id=user_id,
+                            photo=picture_id,
+                            caption=message_text,
+                            caption_entities=message_entities,
+                        )
+                else:
+                    with suppress(TelegramBadRequest):
+                        await bot.send_message(
+                            chat_id=user_id,
+                            text=message_text,
+                            entities=message_entities,
+                            link_preview_options=types.LinkPreviewOptions(
+                                is_disabled=True
+                            ),
+                        )
+
+    with suppress(TelegramBadRequest):
+        await message.answer(text=admin_message)

@@ -50,6 +50,7 @@ class CallbackLimitDefault(CallbackData, prefix="usrsld"):
 
 class CallbackUserLimit(CallbackData, prefix="usrl"):
     action: str
+    user_id: int
 
 
 class CallbackDump(CallbackData, prefix="dump"):

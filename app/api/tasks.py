@@ -1,8 +1,10 @@
 import traceback
+from contextlib import suppress
 from datetime import datetime, timezone
 from string import Template
 
 from aiogram import types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.formatting import Bold, Text
 from common.config import cfg
 from crud import streamers as crud_streamers
@@ -76,12 +78,13 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
             message_text, message_entities = message.render()
 
             if chat["picture_mode"] == "Disabled":
-                await bot.send_message(
-                    chat_id=chat["id"],
-                    text=message_text,
-                    entities=message_entities,
-                    link_preview_options=types.LinkPreviewOptions(is_disabled=True),
-                )
+                with suppress(TelegramBadRequest):
+                    await bot.send_message(
+                        chat_id=chat["id"],
+                        text=message_text,
+                        entities=message_entities,
+                        link_preview_options=types.LinkPreviewOptions(is_disabled=True),
+                    )
             elif chat["picture_mode"] == "Stream start screenshot":
                 stream_picture = None
                 if stream_picture_id == None:
@@ -95,32 +98,35 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                         filename=f"{streamer_login}_{utc_now}.jpg",
                     )
 
-                sended_message = await bot.send_photo(
-                    chat_id=chat["id"],
-                    photo=(stream_picture_id or stream_picture),
-                    caption=message_text,
-                    caption_entities=message_entities,
-                )
+                with suppress(TelegramBadRequest):
+                    sended_message = await bot.send_photo(
+                        chat_id=chat["id"],
+                        photo=(stream_picture_id or stream_picture),
+                        caption=message_text,
+                        caption_entities=message_entities,
+                    )
                 if stream_picture_id == None:
                     file_size = 0
                     for photo in sended_message.photo:
                         if photo.file_size > file_size:
                             stream_picture_id = photo.file_id
             elif chat["picture_mode"] == "Own pic":
-                await bot.send_photo(
-                    chat_id=chat["id"],
-                    photo=chat["picture_id"],
-                    caption=message_text,
-                    caption_entities=message_entities,
-                )
+                with suppress(TelegramBadRequest):
+                    await bot.send_photo(
+                        chat_id=chat["id"],
+                        photo=chat["picture_id"],
+                        caption=message_text,
+                        caption_entities=message_entities,
+                    )
             else:
                 pass
     except Exception as exc:
         if cfg.ENV != "dev":
-            await bot.send_message(
-                chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
-                text=f"ADMIN MESSAGE\nNOTIFICATION ERROR\n{exc}",
-            )
+            with suppress(TelegramBadRequest):
+                await bot.send_message(
+                    chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                    text=f"ADMIN MESSAGE\nNOTIFICATION ERROR\n{exc}",
+                )
         cfg.logger.error(exc)
         traceback.print_exception(exc)
 
@@ -152,9 +158,10 @@ async def revoke_subscriptions(event: dict) -> None:
         )
         message_text, message_entities = message.render()
         for user in users:
-            await bot.send_message(
-                chat_id=user, text=message_text, entities=message_entities
-            )
+            with suppress(TelegramBadRequest):
+                await bot.send_message(
+                    chat_id=user, text=message_text, entities=message_entities
+                )
         if cfg.TELEGRAM_BOT_OWNER_ID not in users:
             message = Text(
                 "ADMIN MESSAGE\nSubscription to ",
@@ -164,16 +171,18 @@ async def revoke_subscriptions(event: dict) -> None:
                 reason,
             )
             message_text, message_entities = message.render()
-            await bot.send_message(
-                chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
-                text=message_text,
-                entities=message_entities,
-            )
+            with suppress(TelegramBadRequest):
+                await bot.send_message(
+                    chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                    text=message_text,
+                    entities=message_entities,
+                )
     except Exception as exc:
         if cfg.ENV != "dev":
-            await bot.send_message(
-                chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
-                text=f"ADMIN MESSAGE\nREVOKATION ERROR\n{exc}",
-            )
+            with suppress(TelegramBadRequest):
+                await bot.send_message(
+                    chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                    text=f"ADMIN MESSAGE\nREVOKATION ERROR\n{exc}",
+                )
         cfg.logger.error(exc)
         traceback.print_exception(exc)

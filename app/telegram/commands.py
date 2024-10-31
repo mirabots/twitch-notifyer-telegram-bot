@@ -2,7 +2,7 @@ from aiogram import types
 
 COMMANDS = [
     types.BotCommand(command="start", description="Start bot"),
-    types.BotCommand(command="info", description="Simple info"),
+    types.BotCommand(command="info", description="Bot usage info"),
     types.BotCommand(command="add_channel", description="Add bot to channel"),
     types.BotCommand(command="chats", description="Show chats/channels list"),
     types.BotCommand(command="subscriptions", description="Subscriptions list"),
@@ -19,7 +19,6 @@ COMMANDS = [
     types.BotCommand(command="admin", description="List of admin commands"),
 ]
 
-
 COMMANDS_ADMIN = {
     "/pause": "(Un)Pause bot",
     "/secrets_reload": "Reload secrets",
@@ -28,4 +27,5 @@ COMMANDS_ADMIN = {
     "/limites": "User's limites",
     "/streamers": "List subscribed streamers",
     "/costs": "Twitch API costs",
+    "/message": "Message to all users",
 }

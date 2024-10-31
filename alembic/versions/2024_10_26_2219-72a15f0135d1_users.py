@@ -24,7 +24,7 @@ def upgrade() -> None:
     op.create_table(
         "users",
         sa.Column("id", sa.BIGINT(), autoincrement=False, nullable=False),
-        sa.Column("limit", sa.String(), nullable=True),
+        sa.Column("limit", sa.Integer(), nullable=True),
         sa.Column("name", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         schema="tntb",

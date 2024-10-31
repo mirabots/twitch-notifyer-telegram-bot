@@ -1,7 +1,9 @@
 import traceback
+from contextlib import suppress
 from typing import Any
 
 from aiogram import types
+from aiogram.exceptions import TelegramBadRequest
 from api.tasks import revoke_subscriptions, send_notifications_to_chats
 from api.verification import verify_telegram_secret, verify_twitch_secret
 from common.config import cfg
@@ -21,10 +23,11 @@ async def webhook_telegram(data: dict[str, Any], headers: dict[str, str]) -> Any
         await dp.feed_update(bot=bot, update=telegram_update)
     except Exception as exc:
         if cfg.ENV != "dev":
-            await bot.send_message(
-                chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
-                text=f"ADMIN MESSAGE\nTG ERROR\n{exc}",
-            )
+            with suppress(TelegramBadRequest):
+                await bot.send_message(
+                    chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                    text=f"ADMIN MESSAGE\nTG ERROR\n{exc}",
+                )
         cfg.logger.error(exc)
         traceback.print_exception(exc)
     return Response(status_code=HTTP_204_NO_CONTENT, content=None)

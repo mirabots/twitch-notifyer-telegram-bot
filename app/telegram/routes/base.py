@@ -34,9 +34,7 @@ async def start_handler(message: types.Message, bot: Bot):
     else:
         join_code = message.text.removeprefix("/start").strip()
         if await cfg.check_invite_code(join_code):
-            message_text = (
-                "Bot started, this chat was added\nUse /info for some information"
-            )
+            message_text = "Bot started, this chat was added\nUse /info for information"
             admin_message_text = f"User {user_name} joined"
             await crud_users.add_user(user_id, cfg.TELEGRAM_LIMIT_DEFAULT, user_name)
             await crud_chats.add_chat(chat_id, user_id)
@@ -160,16 +158,23 @@ async def info_handler(message: types.Message, bot: Bot):
     )
 
     info = formatting.as_marked_section(
-        formatting.Bold("Here is simple instruction how to use bot:"),
+        formatting.Bold("How to use bot:"),
         formatting.Text(
-            "If you want to recieve notifications in channels, first of all, you need to add bot to the channel ",
+            "If you want to recieve notifications in channels (groups are not supported),",
+            " you need to add bot to the channel ",
             formatting.TextLink("using this link", url=bot_channel_link),
             " (with only admin ",
             formatting.Italic("POST POSTS"),
-            " permission).",
+            " permission)",
         ),
-        "Secondly, you need to add streamer subscription to chat/channel, using /subscribe command. That's all.",
-        "Other commands (managing chats and streamers, changing notification text) can be found in command-menu near text-input.",
+        "For subscribing notifications use /subscribe command and choose bot chat or your channel",
+        "You can test (/notification_test) your notifications and customize them",
+        "Change message description via /template",
+        (
+            "Change notification picture mod: /picture and choose prefered view: "
+            "Stream start screenshot, Own picture or Disabled"
+        ),
+        "Other commands can be found in command menu near text-input",
         marker="● ",
     )
     with suppress(TelegramBadRequest):
@@ -200,7 +205,7 @@ async def abort_handler(
     if action == "usrs":
         with suppress(TelegramBadRequest):
             await callback.message.edit_reply_markup(reply_markup=None)
-            return
+        return
     if action == "usrn":
         action_text = "Renaming user"
     if action == "usrr":
@@ -211,7 +216,7 @@ async def abort_handler(
                 text=f"Current default limit: {cfg.TELEGRAM_LIMIT_DEFAULT}",
                 reply_markup=None,
             )
-            return
+        return
     if action == "usrsld":
         action_text = "Changing default limit"
     if action == "usrl":
@@ -220,6 +225,8 @@ async def abort_handler(
         action_text = "Dump"
     if action == "dumpr":
         action_text = "Restoring dump"
+    if action == "mssg":
+        action_text = "Messaging"
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(
