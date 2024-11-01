@@ -91,6 +91,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script_stop: true
           script: |
+            sudo rm -rf ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }} || true
             mkdir ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}
             tar -xf ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}.tar -C ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}/
             cd ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}/
@@ -98,7 +99,6 @@ jobs:
             python3 -m alembic upgrade head
             cd ~
             rm ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}.tar
-            sudo rm -rf ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}
 
   deploy:
     runs-on: ubuntu-latest
