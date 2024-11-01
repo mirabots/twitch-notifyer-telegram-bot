@@ -63,17 +63,17 @@ async def lifespan_function(app: Litestar) -> AsyncGenerator[None, None]:
     ):
         cfg.logger.info("Updating users names")
         for user_id, user_data in cfg.TELEGRAM_USERS.items():
-            user_data = {}
+            updated_user_data = {}
             if user_id != cfg.TELEGRAM_BOT_OWNER_ID and user_data["limit"] == None:
-                user_data["limit"] = cfg.TELEGRAM_LIMIT_DEFAULT
+                updated_user_data["limit"] = cfg.TELEGRAM_LIMIT_DEFAULT
                 cfg.TELEGRAM_USERS[user_id]["limit"] = cfg.TELEGRAM_LIMIT_DEFAULT
             if str(user_id) == user_data["name"]:
                 user_info = await bot.get_chat(user_id)
                 user_name = user_info.full_name + f" ({user_info.username})"
-                user_data["name"] = user_name
+                updated_user_data["name"] = user_name
                 cfg.TELEGRAM_USERS[user_id]["name"] = user_name
-            if user_data:
-                await update_user(user_id, user_data)
+            if updated_user_data:
+                await update_user(user_id, updated_user_data)
 
     # update streamers names
     streamers = await get_all_streamers()
