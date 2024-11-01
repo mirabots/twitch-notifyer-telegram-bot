@@ -40,11 +40,11 @@ async def webhook_twitch(
     await verify_twitch_secret(request)
     cfg.logger.debug(data)
 
-    if data.get("subscription", {}).get("type", "") != "stream.online":
+    if data.get("subscription", {}).get("type", "").lower() != "stream.online":
         cfg.logger.error("Notification is not 'stream.online'")
         return Response(status_code=HTTP_204_NO_CONTENT, content=None)
 
-    event_type = headers.get("Twitch-Eventsub-Message-Type".lower())
+    event_type = headers.get("Twitch-Eventsub-Message-Type".lower(), "").lower()
     streamer_id = (
         data.get("subscription", {})
         .get("condition", {})
