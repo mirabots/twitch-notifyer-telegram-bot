@@ -1,6 +1,6 @@
 from db.common import async_session
 from db.models import Chats, Streamers, Subscriptions
-from sqlalchemy import delete, func, insert, join, select, update
+from sqlalchemy import delete, distinct, func, insert, join, select, update
 
 
 async def subscribe_to_streamer(chat_id: int, streamer_id: str) -> bool:
@@ -137,18 +137,18 @@ async def change_picture_mode(
         )
 
 
-async def get_user_subscription_count(user_id: int) -> int:
+async def get_user_subscription_count(user_id: int) -> tuple[int]:
     async with async_session() as session, session.begin():
-        (subs_count,) = (
+        (subs_count, unique_subs_count) = (
             await session.execute(
-                select(func.count("*"))
+                select(func.count("*"), func.count(distinct(Subscriptions.streamer_id)))
                 .select_from(
                     join(Subscriptions, Chats, Subscriptions.chat_id == Chats.id)
                 )
                 .where(Chats.user_id == user_id)
             )
         ).fetchone()
-        return subs_count
+        return subs_count, unique_subs_count
 
 
 async def get_subscription(chat_id: int, streamer_id: int) -> Subscriptions:

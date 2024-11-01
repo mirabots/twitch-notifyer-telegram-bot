@@ -327,13 +327,14 @@ async def user_limit_handler(
     )
     user_id = callback_data.user_id
 
-    subs_count = await crud_subs.get_user_subscription_count(user_id)
+    subs_count, subs_count_unique = await crud_subs.get_user_subscription_count(user_id)
 
     message_text = (
         f"Current default limit: {cfg.TELEGRAM_LIMIT_DEFAULT}\n"
         f"\nUser {user_name}:"
         f"\n● limit: {cfg.TELEGRAM_USERS[user_id]['limit']}"
         f"\n● subscriptions count: {subs_count}"
+        f"\n● unique subscriptions count: {subs_count_unique}"
     )
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(text=message_text, reply_markup=None)

@@ -1,11 +1,13 @@
 from aiogram import types
 
 COMMANDS = [
-    types.BotCommand(command="start", description="Start bot"),
     types.BotCommand(command="info", description="Bot usage info"),
-    types.BotCommand(command="add_channel", description="Add bot to channel"),
-    types.BotCommand(command="chats", description="Show chats/channels list"),
-    types.BotCommand(command="subscriptions", description="Subscriptions list"),
+    types.BotCommand(
+        command="chats", description="Show chats/channels list and add channels"
+    ),
+    types.BotCommand(
+        command="subscriptions", description="Subscriptions list and limites"
+    ),
     types.BotCommand(
         command="subscribe", description="Subscribe to stream notification"
     ),

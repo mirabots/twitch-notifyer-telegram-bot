@@ -31,33 +31,28 @@ from twitch import functions as twitch
 router = Router()
 
 
-@router.message(Command("add_channel"))
-async def add_channel_handler(message: types.Message, bot: Bot):
+@router.message(Command("chats"))
+async def user_chats_handler(message: types.Message, bot: Bot):
     bot_name = (await bot.me()).username
     bot_channel_link = (
         f"tg://resolve?domain={bot_name}&startchannel&admin=post_messages"
     )
-    message_text = formatting.Text(
+
+    message_text_list = [
         formatting.TextLink("Use this link", url=bot_channel_link),
         " to select channel and add bot (with only admin ",
-        formatting.Italic("POST POSTS"),
-        " permission).",
-    )
-    with suppress(TelegramBadRequest):
-        await message.answer(**message_text.as_kwargs())
-
-
-@router.message(Command("chats"))
-async def user_chats_handler(message: types.Message, bot: Bot):
+        formatting.Italic("POST MESSAGES"),
+        " permission)",
+    ]
     user_id = message.from_user.id
-
     chats = await crud_chats.get_user_chats(user_id)
-    message_text = f"Owned chats/channels ({len(chats)}):"
+    message_text_list.append(f"\n\nOwned chats/channels ({len(chats)}):")
     for chat_id in chats:
         chat_info = await bot.get_chat(chat_id)
-        message_text += f"\n● {chat_info.title or 'ME'} ({chat_info.type})"
+        message_text_list.append(f"\n● {chat_info.title or 'ME'} ({chat_info.type})")
+    message_text = formatting.Text(*message_text_list)
     with suppress(TelegramBadRequest):
-        await message.answer(text=message_text)
+        await message.answer(**message_text.as_kwargs())
 
 
 @router.message(Command("subscriptions"))
@@ -97,21 +92,26 @@ async def chats_handler(message: types.Message, bot: Bot):
     main_keyboard.attach(abort_keyboard)
     reply_markup = main_keyboard.as_markup()
 
-    subs_string = ""
     message_string = "Choose chat/channel:"
+    subs_count, subs_count_unique = await crud_subs.get_user_subscription_count(user_id)
+    if subs_count == 0 and action != "sub":
+        message_string = "No subscriptions"
+        reply_markup = None
     if action in ("subs", "sub", "unsub"):
-        subs_count = await crud_subs.get_user_subscription_count(user_id)
         subs_limit = cfg.TELEGRAM_USERS[user_id]["limit"]
-        subs_string = f"Subs count: {subs_count}/{subs_limit}\n"
+        with suppress(TelegramBadRequest):
+            await message.answer(
+                text=f"Subs count: {subs_count} ({subs_count_unique} unique) / {subs_limit}\n"
+            )
 
         if action == "sub":
-            if subs_limit != None and subs_count >= subs_limit:
+            if subs_limit != None and subs_count_unique >= subs_limit:
                 message_string = "You reached subscription limit!"
                 reply_markup = None
 
     with suppress(TelegramBadRequest):
         await message.answer(
-            text=f"{action_string}{subs_string}{message_string}",
+            text=f"{action_string}{message_string}",
             reply_markup=reply_markup,
         )
 
@@ -147,6 +147,16 @@ async def subscriptions_handler(
 async def subscribe_handler(
     callback: types.CallbackQuery, callback_data: CallbackChooseChat, state: FSMContext
 ):
+    user_id = callback.from_user.id
+    _, subs_count_unique = await crud_subs.get_user_subscription_count(user_id)
+    subs_limit = cfg.TELEGRAM_USERS[user_id]["limit"]
+    if subs_limit != None and subs_count_unique >= subs_limit:
+        with suppress(TelegramBadRequest):
+            await callback.message.edit_text(
+                text="You reached subscription limit!", reply_markup=None
+            )
+        return
+
     chat_name = get_choosed_callback_text(
         callback.message.reply_markup.inline_keyboard, callback.data
     )
