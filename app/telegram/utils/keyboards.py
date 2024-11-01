@@ -18,7 +18,7 @@ def get_keyboard_chats(chats: list[types.Chat], action: str) -> InlineKeyboardBu
     keyboard = InlineKeyboardBuilder()
     for chat in chats:
         keyboard.button(
-            text=f"{chat.title or 'ME'} ({chat.type})",
+            text=f"{chat.title or 'BOT CHAT'} ({chat.type})",
             callback_data=CallbackChooseChat(id=str(chat.id), action=action),
         )
     return keyboard

@@ -49,7 +49,9 @@ async def user_chats_handler(message: types.Message, bot: Bot):
     message_text_list.append(f"\n\nOwned chats/channels ({len(chats)}):")
     for chat_id in chats:
         chat_info = await bot.get_chat(chat_id)
-        message_text_list.append(f"\n● {chat_info.title or 'ME'} ({chat_info.type})")
+        message_text_list.append(
+            f"\n● {chat_info.title or 'BOT CHAT'} ({chat_info.type})"
+        )
     message_text = formatting.Text(*message_text_list)
     with suppress(TelegramBadRequest):
         await message.answer(**message_text.as_kwargs())
