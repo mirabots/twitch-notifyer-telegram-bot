@@ -29,6 +29,7 @@ async def webhook_telegram(data: dict[str, Any], headers: dict[str, str]) -> Any
                     text=f"ADMIN MESSAGE\nTG ERROR\n{exc}",
                 )
         cfg.logger.error(exc)
+        cfg.logger.error(data)
         traceback.print_exception(exc)
     return Response(status_code=HTTP_204_NO_CONTENT, content=None)
 

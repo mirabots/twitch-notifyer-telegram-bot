@@ -167,7 +167,7 @@ async def info_handler(message: types.Message, bot: Bot):
             formatting.Italic("POST POSTS"),
             " permission) (can be found in command /chats later)",
         ),
-        "For subscriptions list and limites info user /subscriptions",
+        "For subscriptions list and limites info use /subscriptions",
         "For subscribing notifications use /subscribe command and choose bot chat or your channel",
         "You can test (/notification_test) your notifications and customize them",
         "Change message description via /template",
