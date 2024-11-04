@@ -13,10 +13,11 @@ Bot will send you and your channels stream.online streamers notifications
 -   Testing notification view
 
 ## ToDo:
+-   Catch parallel commands usage
+-   Remove bot from channels via command
 -   Changing localization
 -   Give channel admins manage notifications
 -   Ignore notification if stream tags or words in title
--   Catch parallel commands usage
 -   Split to apps:
     -   Subscription manager (Twitch + YouTube) with hooks (for example Discord) support
     -   TG bot for Twitch
