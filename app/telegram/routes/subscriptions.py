@@ -43,6 +43,7 @@ async def user_chats_handler(message: types.Message, bot: Bot):
         " to select channel and add bot (with only admin ",
         formatting.Italic("POST MESSAGES"),
         " permission)",
+        "\nFor removal channel delete bot from channel's admins (not members menu)",
     ]
     user_id = message.from_user.id
     chats = await crud_chats.get_user_chats(user_id)
