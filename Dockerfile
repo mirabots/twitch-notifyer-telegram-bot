@@ -10,7 +10,7 @@ COPY ./app /application/app
 
 ARG APP_DEPLOY_NUMBER=0
 ARG APP_COMMIT_TIME=""
-RUN sed -i -e 's/"/-'$APP_DEPLOY_NUMBER' '$APP_COMMIT_TIME'"/2' app/version.py
+RUN sed -i -e 's/"/-$APP_DEPLOY_NUMBER $APP_COMMIT_TIME"/2' app/version.py
 
 ENV APP_HOST=0.0.0.0
 ENV APP_PORT=8880
