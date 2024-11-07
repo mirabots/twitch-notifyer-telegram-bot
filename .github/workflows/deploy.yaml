@@ -1,5 +1,5 @@
 name: Deploy app
-run-name: Deploy app from branch ${{ github.ref_name }} (${{ github.sha }}) to ${{ inputs.target }} env with ${{ inputs.docker_port }} port
+run-name: Deploy app from branch ${{ github.ref_name }} to ${{ inputs.target }} env with ${{ inputs.docker_port }} port
 
 on:
   workflow_dispatch:
@@ -59,6 +59,7 @@ jobs:
         with:
           push: true
           build-args: |
+            APP_DEPLOY_NUMBER=${{ github.run_number }}
             APP_COMMIT_TIME=${{ steps.get_commit_time.outputs.COMMIT_TIME }}
           tags: ${{ env.TNTB_DOCKER_REGISTRY }}/${{ steps.define_image_names.outputs.FULL_IMAGE_NAME }}:latest
 
