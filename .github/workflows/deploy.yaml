@@ -1,5 +1,5 @@
 name: Deploy app
-run-name: Deploy app from branch ${{ github.ref_name }} to ${{ inputs.target }} env with ${{ inputs.docker_port }} port
+run-name: Deploy app from branch ${{ github.ref_name }} (${{ github.sha }}) to ${{ inputs.target }} env with ${{ inputs.docker_port }} port
 
 on:
   workflow_dispatch:
@@ -31,6 +31,14 @@ jobs:
       full_image_name: ${{ steps.define_image_names.outputs.FULL_IMAGE_NAME }}
       image_name: ${{ steps.define_image_names.outputs.IMAGE_NAME }}
     steps:
+      - name: Check out branch
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Get commit time
+        id: get_commit_time
+        run: |
+          echo "COMMIT_TIME=$(TZ=UTC git log -1 --format=%cd --date=iso-local)" >>${GITHUB_OUTPUT}
       - name: Lower case image name
         id: define_image_names
         env:
@@ -40,10 +48,6 @@ jobs:
         run: |
           echo "FULL_IMAGE_NAME=${FULL_REPO,,}/${TARGET}" >>${GITHUB_OUTPUT}
           echo "IMAGE_NAME=${REPO,,}/${TARGET}" >>${GITHUB_OUTPUT}
-      - name: Check out branch
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.ref_name }}
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -54,6 +58,8 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
+          build-args: |
+            APP_COMMIT_TIME=${{ steps.get_commit_time.outputs.COMMIT_TIME }}
           tags: ${{ env.TNTB_DOCKER_REGISTRY }}/${{ steps.define_image_names.outputs.FULL_IMAGE_NAME }}:latest
 
   alembic:

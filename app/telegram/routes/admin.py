@@ -38,13 +38,14 @@ from telegram.utils.keyboards import (
     get_keyboard_users_actions,
 )
 from twitch import functions as twitch
+from version import APP_VERSION
 
 router = Router()
 
 
 @router.message(Command("admin"))
 async def admin_commands_handler(message: types.Message):
-    message_text = "Available admin commands:"
+    message_text = f"Bot version:\n{APP_VERSION}\nAvailable admin commands:"
     for command, description in COMMANDS_ADMIN.items():
         message_text += f"\n● {description}\n○ {command}"
 

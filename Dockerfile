@@ -8,6 +8,9 @@ RUN pip install --no-cache-dir -r /application/requirements.txt
 
 COPY ./app /application/app
 
+ARG APP_COMMIT_TIME=""
+RUN sed -i -e 's/"/ - ${APP_COMMIT_TIME}"/2' app/version.py
+
 ENV APP_HOST=0.0.0.0
 ENV APP_PORT=8880
 ENV APP_ENV=dev
