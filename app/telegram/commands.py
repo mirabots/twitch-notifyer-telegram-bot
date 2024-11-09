@@ -2,9 +2,7 @@ from aiogram import types
 
 COMMANDS = [
     types.BotCommand(command="info", description="Bot usage info"),
-    types.BotCommand(
-        command="chats", description="Show chats/channels list and add channels"
-    ),
+    types.BotCommand(command="channels", description="Manage user channels"),
     types.BotCommand(
         command="subscriptions", description="Subscriptions list and limites"
     ),

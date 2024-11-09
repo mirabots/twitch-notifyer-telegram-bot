@@ -2,6 +2,8 @@ from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from telegram.utils.callbacks import (
     CallbackAbort,
+    CallbackChannelsRemove,
+    CallbackChooseChannel,
     CallbackChooseChat,
     CallbackChooseStreamer,
     CallbackChooseUser,
@@ -19,7 +21,7 @@ def get_keyboard_chats(chats: list[types.Chat], action: str) -> InlineKeyboardBu
     for chat in chats:
         keyboard.button(
             text=f"{chat.title or 'BOT CHAT'} ({chat.type})",
-            callback_data=CallbackChooseChat(id=str(chat.id), action=action),
+            callback_data=CallbackChooseChat(id=chat.id, action=action),
         )
     return keyboard
 
@@ -115,4 +117,22 @@ def get_keyboard_dump() -> InlineKeyboardBuilder:
     keyboard = InlineKeyboardBuilder()
     for action in ("Create", "Restore"):
         keyboard.button(text=action, callback_data=CallbackDump(action=action))
+    return keyboard
+
+
+def get_keyboard_channels_remove() -> InlineKeyboardBuilder:
+    keyboard = InlineKeyboardBuilder()
+    keyboard.button(text="Choose to remove", callback_data=CallbackChannelsRemove())
+    return keyboard
+
+
+def get_keyboard_channels(
+    channels: list[types.Chat], action: str
+) -> InlineKeyboardBuilder:
+    keyboard = InlineKeyboardBuilder()
+    for channel in channels:
+        keyboard.button(
+            text=channel.title,
+            callback_data=CallbackChooseChannel(id=channel.id, action=action),
+        )
     return keyboard

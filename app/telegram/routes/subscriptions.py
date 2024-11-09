@@ -12,6 +12,8 @@ from crud import chats as crud_chats
 from crud import streamers as crud_streamers
 from crud import subscriptions as crud_subs
 from telegram.utils.callbacks import (
+    CallbackChannelsRemove,
+    CallbackChooseChannel,
     CallbackChooseChat,
     CallbackChooseStreamer,
     CallbackDefault,
@@ -21,6 +23,8 @@ from telegram.utils.callbacks import (
 from telegram.utils.forms import FormChangeTemplate, FormPicture, FormSubscribe
 from telegram.utils.keyboards import (
     get_keyboard_abort,
+    get_keyboard_channels,
+    get_keyboard_channels_remove,
     get_keyboard_chats,
     get_keyboard_default,
     get_keyboard_picture,
@@ -31,19 +35,20 @@ from twitch import functions as twitch
 router = Router()
 
 
-@router.message(Command("chats"))
-async def user_chats_handler(message: types.Message, bot: Bot):
+@router.message(Command("channels"))
+async def user_channels_handler(message: types.Message, bot: Bot):
     bot_name = (await bot.me()).username
     bot_channel_link = (
         f"tg://resolve?domain={bot_name}&startchannel&admin=post_messages"
     )
-
     message_text_list = [
-        formatting.TextLink("Use this link", url=bot_channel_link),
-        " to select channel and add bot (with only admin ",
-        formatting.Italic("POST MESSAGES"),
-        " permission)",
-        "\nFor removal channel delete bot from channel's admins (not members menu)",
+        formatting.TextLink(
+            "Use this link to select channel and add bot (with only admin ",
+            formatting.Bold(formatting.Italic("POST MESSAGES")),
+            " permission)",
+            url=bot_channel_link,
+        ),
+        "\nFor removal channel delete bot from channel's admins (not members menu) or use button below",
     ]
     user_id = message.from_user.id
     chats = await crud_chats.get_user_chats(user_id)
@@ -54,8 +59,60 @@ async def user_chats_handler(message: types.Message, bot: Bot):
             f"\n● {chat_info.title or 'BOT CHAT'} ({chat_info.type})"
         )
     message_text = formatting.Text(*message_text_list)
+
+    reply_markup = None
+    if len(chats) > 1:
+        main_keyboard = get_keyboard_channels_remove()
+        reply_markup = main_keyboard.as_markup()
+
     with suppress(TelegramBadRequest):
-        await message.answer(**message_text.as_kwargs())
+        await message.answer(**message_text.as_kwargs(), reply_markup=reply_markup)
+
+
+@router.callback_query(CallbackChannelsRemove.filter())
+async def user_channels_remove_handler(callback: types.CallbackQuery, bot: Bot):
+    with suppress(TelegramBadRequest):
+        await callback.message.edit_reply_markup(reply_markup=None)
+
+    user_id = callback.from_user.id
+    chats_ids = await crud_chats.get_user_chats(user_id)
+    message_text = "No channels"
+    reply_markup = None
+    if len(chats_ids) > 1:
+        message_text = "Choose channel to remove:"
+        channels = [
+            await bot.get_chat(chat_id) for chat_id in chats_ids if chat_id != user_id
+        ]
+        main_keyboard = get_keyboard_channels(channels, "chnlr")
+        main_keyboard.adjust(3)
+        abort_keyboard = get_keyboard_abort("chnlr")
+        main_keyboard.attach(abort_keyboard)
+        reply_markup = main_keyboard.as_markup()
+
+    with suppress(TelegramBadRequest):
+        await callback.message.answer(text=message_text, reply_markup=reply_markup)
+
+
+@router.callback_query(CallbackChooseChannel.filter(F.action == "chnlr"))
+async def user_channel_remove_handler(
+    callback: types.CallbackQuery, callback_data: CallbackChooseChannel, bot: Bot
+):
+    channel_name = get_choosed_callback_text(
+        callback.message.reply_markup.inline_keyboard, callback.data
+    )
+    channel_id = callback_data.id
+
+    await bot.leave_chat(channel_id)
+    await crud_chats.remove_chats([channel_id])
+    subscriptions = await crud_subs.remove_unsubscribed_streamers()
+    for subscription_id in subscriptions:
+        await twitch.unsubscribe_event(subscription_id)
+
+    with suppress(TelegramBadRequest):
+        await callback.message.edit_text(
+            text=f"Channel '{channel_name}' was removed with it's subscriptions",
+            reply_markup=None,
+        )
 
 
 @router.message(Command("subscriptions"))

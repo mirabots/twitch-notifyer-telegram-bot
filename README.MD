@@ -14,7 +14,6 @@ Bot will send you and your channels stream.online streamers notifications
 
 ## ToDo:
 -   Catch parallel commands usage
--   Remove bot from channels via command
 -   Changing localization
 -   Give channel admins manage notifications
 -   Ignore notification if stream tags or words in title

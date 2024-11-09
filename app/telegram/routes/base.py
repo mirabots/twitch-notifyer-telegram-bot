@@ -165,7 +165,7 @@ async def info_handler(message: types.Message, bot: Bot):
             formatting.TextLink("using this link", url=bot_channel_link),
             " (with only admin ",
             formatting.Italic("POST POSTS"),
-            " permission) (can be found in command /chats later)",
+            " permission) (can be found in command /channels later)",
         ),
         "For subscriptions list and limites info use /subscriptions",
         "For subscribing notifications use /subscribe command and choose bot chat or your channel",
@@ -190,6 +190,8 @@ async def abort_handler(
 
     action = callback_data.action
     action_text = ""
+    if action == "chnlr":
+        action_text = "Removing channel"
     if action == "subs":
         action_text = "Getting subscriptions"
     if action == "sub":

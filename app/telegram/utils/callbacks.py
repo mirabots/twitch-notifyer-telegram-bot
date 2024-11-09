@@ -55,3 +55,12 @@ class CallbackUserLimit(CallbackData, prefix="usrl"):
 
 class CallbackDump(CallbackData, prefix="dump"):
     action: str
+
+
+class CallbackChannelsRemove(CallbackData, prefix="chnlsr"):
+    pass
+
+
+class CallbackChooseChannel(CallbackData, prefix="chnl"):
+    id: int
+    action: str
