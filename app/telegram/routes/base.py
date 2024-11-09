@@ -228,8 +228,8 @@ async def abort_handler(
         action_text = "Dump"
     if action == "dumpr":
         action_text = "Restoring dump"
-    if action == "mssg":
-        action_text = "Messaging"
+    if action == "bmsg":
+        action_text = "Broadcast messaging"
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(

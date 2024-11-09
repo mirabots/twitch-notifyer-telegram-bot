@@ -27,6 +27,6 @@ COMMANDS_ADMIN = {
     "/limites": "User's limites",
     "/streamers": "List subscribed streamers",
     "/costs": "Twitch API costs",
-    "/message": "Message to all users",
+    "/broadcast_message": "Broadcast message to all users",
     "/version": "Bot version",
 }

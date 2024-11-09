@@ -29,5 +29,5 @@ class FormPicture(StatesGroup):
     new_picture = State()
 
 
-class FormMessage(StatesGroup):
+class FormBroadcastMessage(StatesGroup):
     message = State()

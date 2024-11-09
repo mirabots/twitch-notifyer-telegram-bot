@@ -23,9 +23,9 @@ from telegram.utils.callbacks import (
     get_choosed_callback_text,
 )
 from telegram.utils.forms import (
+    FormBroadcastMessage,
     FormDump,
     FormLimitDefault,
-    FormMessage,
     FormUserLimit,
     FromUserRename,
 )
@@ -552,20 +552,23 @@ async def dump_restore_form(
         await message.answer(text=message_text)
 
 
-@router.message(Command("message"))
-async def message_handler(message: types.Message, state: FSMContext):
-    abort_keyboard = get_keyboard_abort("mssg")
+@router.message(Command("broadcast_message"))
+async def broadcast_message_handler(message: types.Message, state: FSMContext):
+    abort_keyboard = get_keyboard_abort("bmsg")
     with suppress(TelegramBadRequest):
         sended_message = await message.answer(
-            text="Send message to all users:", reply_markup=abort_keyboard.as_markup()
+            text="Send broadcast message to all users:",
+            reply_markup=abort_keyboard.as_markup(),
         )
 
         await state.set_data({"outgoing_form_message_id": sended_message.message_id})
-        await state.set_state(FormMessage.message)
+        await state.set_state(FormBroadcastMessage.message)
 
 
-@router.message(FormMessage.message)
-async def message_form(message: types.Message, state: FSMContext, bot: Bot) -> None:
+@router.message(FormBroadcastMessage.message)
+async def broadcast_message_form(
+    message: types.Message, state: FSMContext, bot: Bot
+) -> None:
     state_data = await state.get_data()
     outgoing_form_message_id = state_data["outgoing_form_message_id"]
     with suppress(TelegramBadRequest):
