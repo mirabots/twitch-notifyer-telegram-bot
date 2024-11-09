@@ -38,19 +38,25 @@ from telegram.utils.keyboards import (
     get_keyboard_users_actions,
 )
 from twitch import functions as twitch
-from version import APP_VERSION
+from versions import APP_VERSION_STRING
 
 router = Router()
 
 
 @router.message(Command("admin"))
 async def admin_commands_handler(message: types.Message):
-    message_text = f"Bot version:\n{APP_VERSION}\nAvailable admin commands:"
+    message_text = "Available admin commands:"
     for command, description in COMMANDS_ADMIN.items():
         message_text += f"\n● {description}\n○ {command}"
 
     with suppress(TelegramBadRequest):
         await message.answer(text=message_text)
+
+
+@router.message(Command("version"))
+async def version_handler(message: types.Message):
+    with suppress(TelegramBadRequest):
+        await message.answer(text=APP_VERSION_STRING)
 
 
 @router.message(Command("pause"))

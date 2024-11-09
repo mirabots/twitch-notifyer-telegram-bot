@@ -165,4 +165,5 @@ cython_debug/
 # Project
 .vscode/
 config/config.yaml
+config/versions.yaml
 my_scripts/

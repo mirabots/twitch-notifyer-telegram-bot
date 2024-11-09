@@ -21,7 +21,7 @@ from telegram.routes.admin import router as telegram_router_admin
 from telegram.routes.base import router as telegram_router_base
 from telegram.routes.subscriptions import router as telegram_router_subscriptions
 from twitch.functions import get_streamers_names
-from version import APP_VERSION
+from versions import APP_VERSION_STRING
 
 
 @asynccontextmanager
@@ -95,7 +95,7 @@ async def lifespan_function(app: Litestar) -> AsyncGenerator[None, None]:
         with suppress(TelegramBadRequest):
             await bot.send_message(
                 chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
-                text=f"ADMIN MESSAGE\nBOT STARTED\n{APP_VERSION}",
+                text=f"ADMIN MESSAGE\nBOT STARTED\n{APP_VERSION_STRING}",
             )
 
     try:

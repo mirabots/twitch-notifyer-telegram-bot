@@ -28,24 +28,24 @@ jobs:
       contents: read
       packages: write
     outputs:
-      full_image_name: ${{ steps.define_image_names.outputs.FULL_IMAGE_NAME }}
-      image_name: ${{ steps.define_image_names.outputs.IMAGE_NAME }}
+      full_image_name: ${{ steps.define_build_params.outputs.FULL_IMAGE_NAME }}
+      image_name: ${{ steps.define_build_params.outputs.IMAGE_NAME }}
     steps:
       - name: Check out branch
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref_name }}
-      - name: Get commit time
-        id: get_commit_time
-        run: |
-          echo "COMMIT_TIME=$(TZ=UTC git log -1 --format=%cd --date=iso-local)" >>${GITHUB_OUTPUT}
-      - name: Lower case image name
-        id: define_image_names
+      - name: Define build params
+        id: define_build_params
         env:
+          COMMIT_SHA: ${{ github.sha }}
           FULL_REPO: ${{ github.repository }}
           REPO: ${{ github.event.repository.name }}
           TARGET: ${{ inputs.target }}
         run: |
+          echo "COMMIT_HASH=${COMMIT_SHA:0:7}" >>${GITHUB_OUTPUT}
+          echo "COMMIT_TIME=$(TZ=UTC git log -1 --format=%cd --date=iso-local)" >>${GITHUB_OUTPUT}
+          echo "DEPLOY_TIME=$(TZ=UTC date +"%Y-%m-%d %H:%M:%S %z")" >>${GITHUB_OUTPUT}
           echo "FULL_IMAGE_NAME=${FULL_REPO,,}/${TARGET}" >>${GITHUB_OUTPUT}
           echo "IMAGE_NAME=${REPO,,}/${TARGET}" >>${GITHUB_OUTPUT}
       - name: Login to GitHub Container Registry
@@ -59,9 +59,12 @@ jobs:
         with:
           push: true
           build-args: |
+            APP_COMMIT_BRANCH=${{ github.ref_name }}
+            APP_COMMIT_HASH=${{ steps.define_build_params.outputs.COMMIT_HASH }}
+            APP_COMMIT_TIME=${{ steps.define_build_params.outputs.COMMIT_TIME }}
+            APP_DEPLOY_TIME=${{ steps.define_build_params.outputs.DEPLOY_TIME }}
             APP_DEPLOY_NUMBER=${{ github.run_number }}
-            APP_COMMIT_TIME=${{ steps.get_commit_time.outputs.COMMIT_TIME }}
-          tags: ${{ env.TNTB_DOCKER_REGISTRY }}/${{ steps.define_image_names.outputs.FULL_IMAGE_NAME }}:latest
+          tags: ${{ env.TNTB_DOCKER_REGISTRY }}/${{ steps.define_build_params.outputs.FULL_IMAGE_NAME }}:latest
 
   alembic:
     runs-on: ubuntu-latest

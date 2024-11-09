@@ -30,4 +30,5 @@ COMMANDS_ADMIN = {
     "/streamers": "List subscribed streamers",
     "/costs": "Twitch API costs",
     "/message": "Message to all users",
+    "/version": "Bot version",
 }
