@@ -17,6 +17,7 @@ Bot will send you and your channels stream.online streamers notifications
 -   Changing localization
 -   Give channel admins manage notifications
 -   Ignore notification if stream tags or words in title
+-   Admin managing streamers and chennels
 -   Split to apps:
     -   Subscription manager (Twitch + YouTube) with hooks (for example Discord) support
     -   TG bot for Twitch
