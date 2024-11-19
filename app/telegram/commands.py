@@ -34,7 +34,7 @@ COMMANDS_ADMIN = {
 
 def get_command(message_text: str) -> str:
     try:
-        full_command, _ = message_text.split(maxsplit=1)
+        full_command, *args = message_text.split(maxsplit=1)
     except Exception:
         return ""
 
