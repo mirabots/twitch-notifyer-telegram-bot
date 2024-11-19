@@ -1,9 +1,18 @@
-name: Start app
-run-name: Start app at ${{ inputs.target }} env
+name: Deploy action
+run-name: ${{ inputs.action }} app at ${{ inputs.target }} env
 
 on:
   workflow_dispatch:
     inputs:
+      action:
+        description: "Deploy action"
+        required: true
+        default: 'restart'
+        type: choice
+        options:
+          - restart
+          - stop
+          - start
       target:
         description: "Environment"
         required: true
@@ -20,9 +29,9 @@ env:
 jobs:
   stop:
     runs-on: ubuntu-latest
-    name: Start app
+    name: ${{ inputs.action }} app
     steps:
-      - name: Start
+      - name: ${{ inputs.action }}
         uses: appleboy/ssh-action@v1.0.0
         env:
           TNTB_ENV: ${{ inputs.target }}
@@ -34,5 +43,5 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script_stop: true
           script: |
-            echo "-------- Try to start ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }} container"
-            docker start ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}
+            echo "-------- Try to ${{ inputs.action }} ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }} container"
+            docker ${{ inputs.action }} ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}
