@@ -1,7 +1,20 @@
+import asyncio
+import sys
+from copy import copy
+from time import sleep
+
 import httpx
 import requests
 import yaml
 from aiofile import async_open
+from common.utils import (
+    disable_unnecessary_loggers,
+    generate_code,
+    get_args,
+    get_logging_config,
+    levelDEBUG,
+    levelINFO,
+)
 
 
 class ConfigManager:
@@ -9,117 +22,89 @@ class ConfigManager:
         self._config_file = "config/config.yaml"
         self.BOT_ACTIVE = True
 
-    def load_creds(self, env: str) -> None:
-        self.ENV = env
+        self.secrets_data = {}
+        args = get_args()
+        self.ENV = args.env
+
+        if self.ENV != "dev":
+            disable_unnecessary_loggers()
+
+        self.logging_config = get_logging_config(
+            levelDEBUG if self.ENV == "dev" else levelINFO
+        )
+        self.logger = self.logging_config.configure()()
+
+        self.load_creds_sync()
+        error = self.get_creds()
+        if error:
+            self.logger.error(error)
+            sys.exit(1)
+        self.logger.info("Creds from config were loaded")
+
+        error = self.load_secrets_sync()
+        if error:
+            self.logger.error(error)
+            self.logger.error("waiting 120 secs for secrets storage")
+            sleep(120)
+            error = self.load_secrets_sync()
+        if error:
+            self.logger.error(error)
+            sys.exit(1)
+
+        no_secrets = self.apply_secrets(get_db=True)
+        if no_secrets:
+            self.logger.error(f"No secrets found: {no_secrets}")
+            sys.exit(1)
+        self.logger.info("Secrets were loaded")
+        self.lock = asyncio.Lock()
+
+    def load_creds_sync(self) -> None:
         with open(self._config_file, "r") as f:
-            self.data = yaml.safe_load(f.read())
-            try:
-                self.SECRETS_DOMAIN = self.data["secrets_domain"]
-                self.SECRETS_HEADER = self.data["secrets_header"]
-                self.SECRETS_TOKEN = self.data["secrets_token"]
-            except Exception:
-                print("Error getting secrets creds from config-file")
-                raise
+            self.creds_data = yaml.safe_load(f.read())
 
-    async def reload_creds(self) -> None:
+    async def load_creds_async(self) -> None:
         async with async_open(self._config_file, "r") as f:
-            self.data = yaml.safe_load(await f.read())
-            try:
-                self.SECRETS_DOMAIN = self.data["secrets_domain"]
-                self.SECRETS_HEADER = self.data["secrets_header"]
-                self.SECRETS_TOKEN = self.data["secrets_token"]
-            except Exception:
-                print("Error getting secrets creds from config-file")
-                raise
+            self.creds_data = yaml.safe_load(await f.read())
 
-    # async def update_creds(self, updated_creds: UpdatedCreds) -> None:
-    #     self.data.update(updated_creds.model_dump(exclude_none=True))
+    def get_creds(self) -> str:
+        try:
+            self.SECRETS_DOMAIN = self.creds_data["secrets_domain"] or ""
+            self.SECRETS_HEADER = self.creds_data["secrets_header"] or ""
+            self.SECRETS_TOKEN = self.creds_data["secrets_token"] or ""
+        except Exception:
+            return "Error getting secrets creds from config-file"
+        return ""
 
-    #     self.SECRETS_DOMAIN = self.data["secrets_domain"]
-    #     self.SECRETS_HEADER = self.data["secrets_header"]
-    #     self.SECRETS_TOKEN = self.data["secrets_token"]
+    async def update_creds(self, updated_creds: dict) -> None:
+        self.creds_data.update(updated_creds)
 
-    #     async with async_open(self._config_file, "w") as f:
-    #         yaml.dump(self.data, f)
+        self.SECRETS_DOMAIN = self.data["secrets_domain"]
+        self.SECRETS_HEADER = self.data["secrets_header"]
+        self.SECRETS_TOKEN = self.data["secrets_token"]
 
-    def load_secrets(self) -> None:
+        async with async_open(self._config_file, "w") as f:
+            yaml.dump(self.creds_data, f)
+
+    def load_secrets_sync(self) -> str:
         try:
             response = requests.get(
                 f"{self.SECRETS_DOMAIN}/api/secrets",
                 headers={self.SECRETS_HEADER: self.SECRETS_TOKEN},
             )
             if response.status_code != 200:
-                print(f"Error getting data from secrets - {response.status_code}")
-                raise
+                return (
+                    f"Error getting data from secrets response - {response.status_code}"
+                )
         except Exception as e:
-            print(f"Error getting data from secrets - {e}")
-            raise
+            return f"Error getting data from secrets - {e}"
 
-        secrets_data = response.json()["content"]
+        try:
+            self.secrets_data = response.json()["content"]
+            return ""
+        except Exception:
+            return "Error getting secrets from response"
 
-        self.DB_CONNECTION_STRING = ""
-        # postgres
-        postgres_data = secrets_data.get(f"{self.ENV}/db/postgres")
-        if postgres_data:
-            self.DB_CONNECTION_STRING = "{}://{}:{}@{}:{}/{}".format(
-                "postgresql+asyncpg",
-                postgres_data["user"],
-                postgres_data["password"],
-                postgres_data["host"],
-                str(postgres_data["port"]),
-                postgres_data["database"],
-            )
-        else:
-            print("No postgres data in secrets")
-
-        sqlite_data = secrets_data.get(f"{self.ENV}/db/sqlite")
-        if sqlite_data:
-            self.DB_CONNECTION_STRING = f"sqlite+aiosqlite:///{sqlite_data['path']}"
-        else:
-            print("No sqlite data in secrets")
-
-        if not self.DB_CONNECTION_STRING:
-            raise
-
-        # owner data
-        owner_data = secrets_data.get(f"{self.ENV}/owner")
-        if owner_data:
-            self.OWNER_LOGIN = owner_data["login"]
-            self.OWNER_ID = owner_data["id"]
-        else:
-            print("No owner data in secrets")
-            raise
-
-        # domain
-        domain_data = secrets_data.get(f"{self.ENV}/domain")
-        if domain_data:
-            self.DOMAIN = domain_data["domain"]
-        else:
-            print("No service domain data in secrets")
-            raise
-
-        # twitch
-        twitch_data = secrets_data.get(f"{self.ENV}/twitch")
-        if twitch_data:
-            self.TWITCH_CLIENT_ID = twitch_data["client_id"]
-            self.TWITCH_CLIENT_SECRET = twitch_data["client_secret"]
-            self.TWITCH_SUBSCRIPTION_SECRET = twitch_data["subscription_secret"]
-            self.TWITCH_BEARER = "NONE"
-        else:
-            print("No twitch data in secrets")
-            raise
-
-        # telegram
-        telegram_data = secrets_data.get(f"{self.ENV}/telegram")
-        if telegram_data:
-            self.TELEGRAM_TOKEN = telegram_data["token"]
-            self.TELEGRAM_SECRET = telegram_data["secret"]
-            self.TELEGRAM_ALLOWED = telegram_data["allowed"]
-        else:
-            print("No telegram data in secrets")
-            raise
-
-    async def reload_secrets(self) -> list[str]:
+    async def load_secrets_async(self) -> str:
         try:
             async with httpx.AsyncClient(
                 base_url=self.SECRETS_DOMAIN,
@@ -127,68 +112,98 @@ class ConfigManager:
             ) as ac:
                 response = await ac.get("/api/secrets")
                 if response.status_code != 200:
-                    return [f"Error getting data from secrets - {response.status_code}"]
+                    return f"Error getting data from secrets response - {response.status_code}"
         except Exception as e:
-            return [f"Error getting data from secrets - {e}"]
+            return f"Error getting data from secrets - {e}"
 
-        secrets_data = response.json()["content"]
+        try:
+            self.secrets_data = response.json()["content"]
+            return ""
+        except Exception:
+            return "Error getting secrets from response"
+
+    def apply_secrets(self, get_db: bool) -> list[str]:
         no_secrets = []
 
-        # # postgres
-        # postgres_data = secrets_data.get(f"{self.ENV}/db/postgres")
-        # if postgres_data:
-        #     self.DB_CONNECTION_STRING = "{}://{}:{}@{}:{}/{}".format(
-        #         "postgresql+asyncpg",
-        #         postgres_data["user"],
-        #         postgres_data["password"],
-        #         postgres_data["host"],
-        #         str(postgres_data["port"]),
-        #         postgres_data["database"],
-        #     )
-        # else:
-        #     no_secrets.append(f"{self.ENV}/db/postgres")
-
-        # sqlite_data = secrets_data.get(f"{self.ENV}/db/sqlite")
-        # if sqlite_data:
-        #     self.DB_CONNECTION_STRING = f"sqlite+aiosqlite:///{sqlite_data['path']}"
-        # else:
-        #     no_secrets.append(f"{self.ENV}/db/sqlite")
-
-        # owner data
-        owner_data = secrets_data.get(f"{self.ENV}/owner")
-        if owner_data:
-            self.OWNER_LOGIN = owner_data["login"]
-            self.OWNER_ID = owner_data["id"]
-        else:
-            no_secrets.append(f"{self.ENV}/owner")
+        # database: need to get only at startup
+        if get_db:
+            db_data = self.secrets_data.get(f"{self.ENV}/db")
+            try:
+                self.DB_CONNECTION_STRING: str = db_data["connection string"]
+            except Exception:
+                no_secrets.append(f"{self.ENV}/db")
 
         # domain
-        domain_data = secrets_data.get(f"{self.ENV}/domain")
-        if domain_data:
-            self.DOMAIN = domain_data["domain"]
-        else:
+        domain_data = self.secrets_data.get(f"{self.ENV}/domain")
+        try:
+            self.DOMAIN: str = domain_data["domain"]
+        except Exception:
             no_secrets.append(f"{self.ENV}/domain")
 
         # twitch
-        twitch_data = secrets_data.get(f"{self.ENV}/twitch")
-        if twitch_data:
-            self.TWITCH_CLIENT_ID = twitch_data["client_id"]
-            self.TWITCH_CLIENT_SECRET = twitch_data["client_secret"]
-            # self.TWITCH_SUBSCRIPTION_SECRET = twitch_data["subscription_secret"]
-            # self.TWITCH_BEARER = "NONE"
-        else:
+        twitch_data = self.secrets_data.get(f"{self.ENV}/twitch")
+        try:
+            self.TWITCH_CLIENT_ID: str = twitch_data["client_id"]
+            self.TWITCH_CLIENT_SECRET: str = twitch_data["client_secret"]
+            self.TWITCH_SUBSCRIPTION_SECRET: str = twitch_data["subscription_secret"]
+            self.TWITCH_BEARER: str = "NONE"
+        except Exception:
             no_secrets.append(f"{self.ENV}/twitch")
 
         # telegram
-        telegram_data = secrets_data.get(f"{self.ENV}/telegram")
-        if telegram_data:
-            self.TELEGRAM_TOKEN = telegram_data["token"]
-            self.TELEGRAM_SECRET = telegram_data["secret"]
-            self.TELEGRAM_ALLOWED = telegram_data["allowed"]
-        else:
+        telegram_data = self.secrets_data.get(f"{self.ENV}/telegram")
+        try:
+            self.TELEGRAM_BOT_OWNER_ID: int = telegram_data["owner_id"]
+            self.TELEGRAM_TOKEN: str = telegram_data["token"]
+            self.TELEGRAM_SECRET: str = telegram_data["secret"]
+            self.TELEGRAM_LIMIT_DEFAULT = int(telegram_data["limit_default"])
+            self.TELEGRAM_INVITE_CODE = generate_code()
+            self.TELEGRAM_USERS: dict[int, dict[str, int | str | None]] = {}
+        except Exception:
             no_secrets.append(f"{self.ENV}/telegram")
 
         return no_secrets
+
+    async def check_invite_code(self, code) -> bool:
+        async with self.lock:
+            is_valid = False
+            if self.TELEGRAM_INVITE_CODE == code:
+                cfg.TELEGRAM_INVITE_CODE = generate_code()
+                is_valid = True
+            return is_valid
+
+    async def update_limit_default(self, value: int) -> str:
+        old_default_value = copy(self.TELEGRAM_LIMIT_DEFAULT)
+        old_users_value = copy(self.TELEGRAM_USERS)
+
+        self.TELEGRAM_LIMIT_DEFAULT = value
+        self.secrets_data[f"{self.ENV}/telegram"]["limit_default"] = value
+        for user in self.TELEGRAM_USERS:
+            if self.TELEGRAM_USERS[user]["limit"] == old_default_value:
+                self.TELEGRAM_USERS[user]["limit"] = value
+
+        update_secrets_result = ""
+        try:
+            async with httpx.AsyncClient(
+                base_url=self.SECRETS_DOMAIN,
+                headers={self.SECRETS_HEADER: self.SECRETS_TOKEN},
+            ) as ac:
+                data = {"data": self.secrets_data[f"{self.ENV}/telegram"]}
+                response = await ac.put(f"/api/secrets/{self.ENV}/telegram", json=data)
+                if response.status_code != 200:
+                    update_secrets_result = (
+                        f"Error updating data in secrets - {response.status_code}"
+                    )
+        except Exception as e:
+            update_secrets_result = f"Error updating data in secrets - {e}"
+
+        if update_secrets_result:
+            self.TELEGRAM_LIMIT_DEFAULT = old_default_value
+            self.secrets_data[f"{self.ENV}/telegram"][
+                "limit_default"
+            ] = old_default_value
+            self.TELEGRAM_USERS = old_users_value
+        return update_secrets_result
 
 
 cfg = ConfigManager()

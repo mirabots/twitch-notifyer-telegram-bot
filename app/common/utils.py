@@ -1,39 +1,63 @@
-import hashlib
-import hmac
+import getopt
+import logging
+import secrets
+import string
+import sys
+from types import SimpleNamespace
 
-from fastapi import HTTPException, Request
-from fastapi.responses import JSONResponse
+from litestar.logging import LoggingConfig
 
-from .config import cfg
-
-
-async def verify_telegram_secret(request: Request) -> None:
-    header_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
-    if header_secret != cfg.TELEGRAM_SECRET:
-        raise HTTPException(status_code=401, detail="NOT VERIFIED")
+levelDEBUG = logging.DEBUG
+# levelDEBUG = logging.INFO
+levelINFO = logging.INFO
+FORMAT = "%(levelname)-8s\t%(asctime)s\t\t%(message)s"
 
 
-async def verify_twitch_event(request: Request) -> None:
-    body = (await request.body()).decode()
-    sended_HMAC = request.headers.get("Twitch-Eventsub-Message-Signature").lower()
-    server_HMAC = (
-        "sha256="
-        + hmac.new(
-            cfg.TWITCH_SUBSCRIPTION_SECRET.encode(),
-            (
-                request.headers.get("Twitch-Eventsub-Message-Id")
-                + request.headers.get("Twitch-Eventsub-Message-Timestamp")
-                + body
-            ).encode(),
-            hashlib.sha256,
-        ).hexdigest()
+def get_args() -> SimpleNamespace:
+    args = SimpleNamespace(env="dev", host="0.0.0.0", port=8880)
+    opts, _ = getopt.getopt(sys.argv[1:], "H:P:E:", ["host=", "port=", "env="])
+    for name, value in opts:
+        if name in ("-H", "--host"):
+            args.host = value
+        if name in ("-P", "--port"):
+            args.port = int(value)
+        if name in ("-E", "--env"):
+            args.env = value
+    return args
+
+
+def get_logger(level: int) -> logging.Logger:
+    logger = logging.getLogger()
+    logging.basicConfig(format=FORMAT, level=level)
+    return logger
+
+
+def get_logging_config(level: int) -> LoggingConfig:
+    return LoggingConfig(
+        root={"level": logging.getLevelName(level), "handlers": ["console"]},
+        formatters={"standard": {"format": FORMAT}},
     )
-    if sended_HMAC != server_HMAC:
-        raise HTTPException(status_code=403, detail="NOT VERIFIED")
 
 
-async def server_error(request, exc) -> JSONResponse:
-    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+def disable_unnecessary_loggers() -> None:
+    urllib3_logger = logging.getLogger("urllib3")
+    urllib3_logger.setLevel(logging.CRITICAL)
+
+    httpx_logger = logging.getLogger("httpx")
+    httpx_logger.setLevel(logging.CRITICAL)
+
+    aiogram_event_logger = logging.getLogger("aiogram.event")
+    aiogram_event_logger.setLevel(logging.CRITICAL)
 
 
-exception_handlers = {500: server_error}
+def generate_code() -> str:
+    alphabet = string.ascii_letters + string.digits
+    while True:
+        code = "".join(secrets.choice(alphabet) for i in range(60))
+        if (
+            sum(c.islower() for c in code) >= 10
+            and sum(c.isupper() for c in code) >= 10
+            and sum(c.isdigit() for c in code) >= 10
+        ):
+            break
+    return code

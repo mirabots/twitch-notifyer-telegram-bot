@@ -6,19 +6,28 @@ SCHEMA = "tntb"
 Base = declarative_base(metadata=MetaData(schema=SCHEMA))
 
 
+class Users(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(BIGINT, primary_key=True, autoincrement=False)
+    limit: Mapped[int] = mapped_column(nullable=True)
+    name: Mapped[str] = mapped_column(nullable=True)
+
+
 class Chats(Base):
     __tablename__ = "chats"
 
     id: Mapped[int] = mapped_column(BIGINT, primary_key=True, autoincrement=False)
-    owner_id: Mapped[int] = mapped_column(BIGINT, nullable=False)
+    user_id: Mapped[int] = mapped_column(BIGINT, nullable=False)
 
 
 class Streamers(Base):
     __tablename__ = "streamers"
 
     id: Mapped[str] = mapped_column(primary_key=True, autoincrement=False)
+    name: Mapped[str] = mapped_column(nullable=False)
     subscription_id: Mapped[str] = mapped_column(nullable=False)
-    last_message: Mapped[str]
+    last_message: Mapped[str] = mapped_column(nullable=True)
 
 
 class Subscriptions(Base):
@@ -26,4 +35,6 @@ class Subscriptions(Base):
 
     chat_id: Mapped[int] = mapped_column(BIGINT, primary_key=True)
     streamer_id: Mapped[str] = mapped_column(primary_key=True)
-    message_template: Mapped[str] = mapped_column(Text)
+    message_template: Mapped[str] = mapped_column(Text, nullable=True)
+    picture_mode: Mapped[str] = mapped_column(nullable=False)
+    picture_id: Mapped[str] = mapped_column(nullable=True)

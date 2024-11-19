@@ -1,0 +1,47 @@
+name: Deploy action
+run-name: ${{ inputs.action }} app at ${{ inputs.target }} env
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Deploy action"
+        required: true
+        default: 'restart'
+        type: choice
+        options:
+          - restart
+          - stop
+          - start
+      target:
+        description: "Environment"
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - test
+          - prod
+
+env:
+  TNTB_NAME: tntb
+  TNTB_DOCKER_REGISTRY: ghcr.io
+
+jobs:
+  stop:
+    runs-on: ubuntu-latest
+    name: ${{ inputs.action }} app
+    steps:
+      - name: ${{ inputs.action }}
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          TNTB_ENV: ${{ inputs.target }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: |
+            echo "-------- Try to ${{ inputs.action }} ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }} container"
+            docker ${{ inputs.action }} ${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}

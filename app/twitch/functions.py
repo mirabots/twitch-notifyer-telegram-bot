@@ -1,68 +1,78 @@
-from .api import (
+from collections.abc import Awaitable, Callable
+
+from common.config import cfg
+from httpx import Response
+from twitch.api import (
     _auth,
     _get_channel_info,
+    _get_costs,
     _get_stream_info,
-    _get_streamer_id,
-    _get_streamer_picture,
-    _get_streamers_names,
+    _get_streamers_info,
     _subscribe_event,
     _unsubscribe_event,
 )
 
 
-async def get_streamer_id(streamer_name: str) -> str:
-    answer = await _get_streamer_id(streamer_name)
-    if answer.status_code == 401:
-        await _auth()
-        answer = await _get_streamer_id(streamer_name)
+async def _make_api_request(
+    api_function: Callable[..., Awaitable[Response]], *args, **kwargs
+) -> Response:
+    try:
+        answer = await api_function(*args, **kwargs)
+        if answer.status_code == 401:
+            await _auth()
+            answer = await api_function(*args, **kwargs)
+        return answer
+    except Exception:
+        return Response(status_code=-1, content="{}")
 
+
+async def get_streamer_info(streamer_login: str) -> dict[str, str]:
+    answer = await _make_api_request(_get_streamers_info, {"login": streamer_login})
     if answer.status_code != 200:
-        print("get id error")
-        return ""
+        cfg.logger.error(f"Getting streamer id error with code {answer.status_code}")
+        return {}
 
     answer_json = answer.json()
-    if not answer_json["data"]:
-        return ""
-    return answer_json["data"][0]["id"]
-
-
-async def get_streamers_names(streamers_ids: list[str]) -> dict[str, str]:
-    answer = await _get_streamers_names(streamers_ids)
-    if answer.status_code == 401:
-        await _auth()
-        answer = await _get_streamers_names(streamers_ids)
-
-    answer_json = answer.json()
+    if not answer_json.get("data"):
+        return {}
     return {
-        streamer["id"]: streamer["display_name"] for streamer in answer_json["data"]
+        "id": answer_json["data"][0]["id"],
+        "name": answer_json["data"][0]["display_name"],
     }
 
 
-async def get_streamer_picture(streamer_id: str) -> str:
-    answer = await _get_streamer_picture(streamer_id)
-    if answer.status_code == 401:
-        await _auth()
-        answer = await _get_streamer_picture(streamer_id)
-    if answer.status_code != 200:
-        print("get picture error")
-        return ""
+async def get_streamers_names(streamers_ids: list[str]) -> dict[str, str]:
+    result = {}
+    slice_size = 100
+    while streamers_ids:
+        streamers_ids_slice = streamers_ids[:slice_size]
+        answer = await _make_api_request(
+            _get_streamers_info, {"id": streamers_ids_slice}
+        )
 
-    answer_json = answer.json()
-    if not answer_json["data"]:
-        return ""
-    return answer_json["data"][0]["profile_image_url"]
+        answer_json = answer.json()
+        if not answer_json.get("data"):
+            return {}
+        else:
+            result.update(
+                {
+                    streamer["id"]: streamer["display_name"]
+                    for streamer in answer_json["data"]
+                }
+            )
+        del streamers_ids[:slice_size]
+
+    return result
 
 
 async def get_stream_info(streamer_id: str) -> dict[str, str]:
-    answer = await _get_stream_info(streamer_id)
-    if answer.status_code == 401:
-        await _auth()
-        answer = await _get_stream_info(streamer_id)
+    answer = await _make_api_request(_get_stream_info, streamer_id)
     if answer.status_code != 200:
-        print("get stream info error")
+        cfg.logger.error(f"Getting streamer info error with code {answer.status_code}")
         return {}
+
     answer_json = answer.json()
-    if not answer_json["data"]:
+    if not answer_json.get("data"):
         return {}
     return {
         "title": answer_json["data"][0]["title"],
@@ -72,15 +82,13 @@ async def get_stream_info(streamer_id: str) -> dict[str, str]:
 
 
 async def get_channel_info(streamer_id: str) -> dict[str, str]:
-    answer = await _get_channel_info(streamer_id)
-    if answer.status_code == 401:
-        await _auth()
-        answer = await _get_channel_info(streamer_id)
+    answer = await _make_api_request(_get_channel_info, streamer_id)
     if answer.status_code != 200:
-        print("get channel info error")
+        cfg.logger.error(f"Getting channel info error with code {answer.status_code}")
         return {}
+
     answer_json = answer.json()
-    if not answer_json["data"]:
+    if not answer_json.get("data"):
         return {}
     return {
         "title": answer_json["data"][0]["title"],
@@ -89,24 +97,34 @@ async def get_channel_info(streamer_id: str) -> dict[str, str]:
 
 
 async def subscribe_event(streamer_id: str, event_type: str) -> str:
-    answer = await _subscribe_event(streamer_id, event_type)
-    if answer.status_code == 401:
-        await _auth()
-        answer = await _subscribe_event(streamer_id, event_type)
+    answer = await _make_api_request(_subscribe_event, streamer_id, event_type)
     if answer.status_code != 202:
-        print("subscribe error")
+        cfg.logger.error(
+            f"Subscribe event ({event_type}) error with code {answer.status_code}"
+        )
         return ""
 
     answer_json = answer.json()
-    if not answer_json["data"]:
+    if not answer_json.get("data"):
         return ""
     return answer_json["data"][0]["id"]
 
 
 async def unsubscribe_event(event_id: str) -> None:
-    answer = await _unsubscribe_event(event_id)
-    if answer.status_code == 401:
-        await _auth()
-        answer = await _unsubscribe_event(event_id)
+    answer = await _make_api_request(_unsubscribe_event, event_id)
     if answer.status_code != 204:
-        print("unsubscribe error")
+        cfg.logger.error(f"Unsubscribe event error with code {answer.status_code}")
+
+
+async def get_costs() -> dict[str, int]:
+    answer = await _make_api_request(_get_costs)
+    if answer.status_code != 200:
+        cfg.logger.error(f"Getting costs info with error {answer.status_code}")
+        return {}
+
+    answer_json = answer.json()
+    return {
+        "total": answer_json["total"],
+        "total_cost": answer_json["total_cost"],
+        "max_total_cost": answer_json["max_total_cost"],
+    }
