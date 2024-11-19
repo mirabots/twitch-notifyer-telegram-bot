@@ -53,7 +53,7 @@ class CallbackUserLimit(CallbackData, prefix="usrl"):
     user_id: int
 
 
-class CallbackDump(CallbackData, prefix="dump"):
+class CallbackDump(CallbackData, prefix="dumpc"):
     action: str
 
 

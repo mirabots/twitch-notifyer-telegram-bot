@@ -20,13 +20,23 @@ COMMANDS = [
 ]
 
 COMMANDS_ADMIN = {
-    "/pause": "(Un)Pause bot",
-    "/secrets_reload": "Reload secrets",
-    "/dump": "Manage bot db dump",
-    "/users": "List and manage users (+channels)",
-    "/limites": "User's limites",
-    "/streamers": "List subscribed streamers",
-    "/costs": "Twitch API costs",
-    "/broadcast_message": "Broadcast message to all users",
-    "/version": "Bot version",
+    "pause": "(Un)Pause bot",
+    "secrets_reload": "Reload secrets",
+    "dump": "Manage bot db dump",
+    "users": "List and manage users (+channels)",
+    "limites": "User's limites",
+    "streamers": "List subscribed streamers",
+    "costs": "Twitch API costs",
+    "broadcast_message": "Broadcast message to all users",
+    "version": "Bot version",
 }
+
+
+def get_command(message_text: str) -> str:
+    try:
+        full_command, _ = message_text.split(maxsplit=1)
+    except Exception:
+        return ""
+
+    _, (command, _, _) = full_command[0], full_command[1:].partition("@")
+    return command

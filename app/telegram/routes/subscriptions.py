@@ -1,5 +1,7 @@
+from collections import namedtuple
 from contextlib import suppress
 from datetime import datetime, timezone
+from enum import Enum
 from string import Template
 
 from aiogram import Bot, F, Router, types
@@ -11,6 +13,7 @@ from common.config import cfg
 from crud import chats as crud_chats
 from crud import streamers as crud_streamers
 from crud import subscriptions as crud_subs
+from telegram.commands import get_command
 from telegram.utils.callbacks import (
     CallbackChannelsRemove,
     CallbackChooseChannel,
@@ -122,26 +125,20 @@ async def user_channel_remove_handler(
 @router.message(Command("picture"))
 @router.message(Command("notification_test"))
 async def chats_handler(message: types.Message, bot: Bot):
-    command_text = message.text.rstrip()
+    command = get_command(message.text)
     user_id = message.from_user.id
 
-    action = "subs"
-    action_string = "Subscriptions list\n"
-    if "/subscribe" in command_text:
-        action = "sub"
-        action_string = "Subscribe to stream notification\n"
-    if "/unsubscribe" in command_text:
-        action = "unsub"
-        action_string = "Unsubscribe from stream notification\n"
-    if "/template" in command_text:
-        action = "tmplt"
-        action_string = "Change notification template\n"
-    if "/picture" in command_text:
-        action = "pctr"
-        action_string = "Change notification picture mode\n"
-    if "/notification_test" in command_text:
-        action = "ntfctn"
-        action_string = "Test notification\n"
+    ACTONS_TEXTS = namedtuple("ACTONS_TEXTS", ["action", "text"])
+
+    class ACTONS(Enum):
+        SUBSCRIPTIONS = ACTONS_TEXTS("subs", "Stream subscriptions list")
+        SUBSCRIBE = ACTONS_TEXTS("sub", "Subscribe to stream notification")
+        UNSUBSCRIBE = ACTONS_TEXTS("unsub", "Unsubscribe from stream notification")
+        TEMPLATE = ACTONS_TEXTS("tmplt", "Change notification template")
+        PICTURE = ACTONS_TEXTS("pctr", "Change notification picture mode")
+        NOTIFICATION_TEST = ACTONS_TEXTS("ntfctn", "Test notification")
+
+    action, action_string = ACTONS[command.upper()].value
 
     chats_ids = await crud_chats.get_user_chats(user_id)
     chats = [await bot.get_chat(chat_id) for chat_id in chats_ids]
@@ -171,7 +168,7 @@ async def chats_handler(message: types.Message, bot: Bot):
 
     with suppress(TelegramBadRequest):
         await message.answer(
-            text=f"{action_string}{message_string}",
+            text=f"{action_string}\n{message_string}",
             reply_markup=reply_markup,
         )
 
@@ -186,7 +183,7 @@ async def subscriptions_handler(
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(
-            text=f"Subscriptions list\n'{chat_name}' choosen", reply_markup=None
+            text=f"Stream subscriptions list\n'{chat_name}' choosen", reply_markup=None
         )
     streamers = await crud_subs.get_subscribed_streames(callback_data.id)
     if not streamers:

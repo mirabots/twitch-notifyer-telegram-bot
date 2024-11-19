@@ -4,12 +4,18 @@ import httpx
 from common.config import cfg
 from telegram.bot import bot
 
+ROUTE_OAUTH2_TOKEN = "https://id.twitch.tv/oauth2/token"
+ROUTE_USERS = "https://api.twitch.tv/helix/users"
+ROUTE_STREAMS = "https://api.twitch.tv/helix/streams"
+ROUTE_CHANNELS = "https://api.twitch.tv/helix/channels"
+ROUTE_EVENTS_SUBSCRIPTIONS = "https://api.twitch.tv/helix/eventsub/subscriptions"
+
 
 async def _auth() -> None:
     try:
         async with httpx.AsyncClient() as ac:
             answer = await ac.post(
-                "https://id.twitch.tv/oauth2/token",
+                ROUTE_OAUTH2_TOKEN,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 data={
                     "client_id": cfg.TWITCH_CLIENT_ID,
@@ -33,7 +39,7 @@ async def _auth() -> None:
 async def _get_streamers_info(params: dict[str, str | list[str]]) -> httpx.Response:
     async with httpx.AsyncClient() as ac:
         return await ac.get(
-            "https://api.twitch.tv/helix/users",
+            ROUTE_USERS,
             headers={
                 "Client-Id": cfg.TWITCH_CLIENT_ID,
                 "Authorization": f"Bearer {cfg.TWITCH_BEARER}",
@@ -45,7 +51,7 @@ async def _get_streamers_info(params: dict[str, str | list[str]]) -> httpx.Respo
 async def _get_stream_info(streamer_id: str) -> httpx.Response:
     async with httpx.AsyncClient() as ac:
         return await ac.get(
-            "https://api.twitch.tv/helix/streams",
+            ROUTE_STREAMS,
             headers={
                 "Client-Id": cfg.TWITCH_CLIENT_ID,
                 "Authorization": f"Bearer {cfg.TWITCH_BEARER}",
@@ -57,7 +63,7 @@ async def _get_stream_info(streamer_id: str) -> httpx.Response:
 async def _get_channel_info(streamer_id: str) -> httpx.Response:
     async with httpx.AsyncClient() as ac:
         return await ac.get(
-            "https://api.twitch.tv/helix/channels",
+            ROUTE_CHANNELS,
             headers={
                 "Client-Id": cfg.TWITCH_CLIENT_ID,
                 "Authorization": f"Bearer {cfg.TWITCH_BEARER}",
@@ -69,7 +75,7 @@ async def _get_channel_info(streamer_id: str) -> httpx.Response:
 async def _subscribe_event(streamer_id: str, event_type: str) -> httpx.Response:
     async with httpx.AsyncClient() as ac:
         return await ac.post(
-            "https://api.twitch.tv/helix/eventsub/subscriptions",
+            ROUTE_EVENTS_SUBSCRIPTIONS,
             headers={
                 "Client-Id": cfg.TWITCH_CLIENT_ID,
                 "Authorization": f"Bearer {cfg.TWITCH_BEARER}",
@@ -90,7 +96,7 @@ async def _subscribe_event(streamer_id: str, event_type: str) -> httpx.Response:
 async def _unsubscribe_event(event_id: str) -> httpx.Response:
     async with httpx.AsyncClient() as ac:
         return await ac.delete(
-            "https://api.twitch.tv/helix/eventsub/subscriptions",
+            ROUTE_EVENTS_SUBSCRIPTIONS,
             headers={
                 "Client-Id": cfg.TWITCH_CLIENT_ID,
                 "Authorization": f"Bearer {cfg.TWITCH_BEARER}",
@@ -102,7 +108,7 @@ async def _unsubscribe_event(event_id: str) -> httpx.Response:
 async def _get_costs() -> httpx.Response:
     async with httpx.AsyncClient() as ac:
         return await ac.get(
-            "https://api.twitch.tv/helix/eventsub/subscriptions",
+            ROUTE_EVENTS_SUBSCRIPTIONS,
             headers={
                 "Client-Id": cfg.TWITCH_CLIENT_ID,
                 "Authorization": f"Bearer {cfg.TWITCH_BEARER}",

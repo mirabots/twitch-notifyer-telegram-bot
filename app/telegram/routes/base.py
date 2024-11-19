@@ -1,4 +1,5 @@
 from contextlib import suppress
+from enum import Enum
 
 from aiogram import Bot, Router, types
 from aiogram.enums.chat_member_status import ChatMemberStatus
@@ -188,51 +189,35 @@ async def abort_handler(
 ):
     await state.clear()
 
-    action = callback_data.action
-    action_text = ""
-    if action == "chnlr":
-        action_text = "Removing channel"
-    if action == "subs":
-        action_text = "Getting subscriptions"
-    if action == "sub":
-        action_text = "Subscribe"
-    if action == "unsub":
-        action_text = "Unsubscribe"
-    if action == "tmplt":
-        action_text = "Changing template"
-    if action == "pctr":
-        action_text = "Changing picture mode"
-    if action == "ntfctn":
-        action_text = "Testing notification"
+    class ACTONS_TEXTS(Enum):
+        DEFAULT = "Operation was aborted"
+        CHNLR = "Removing channel operation was aborted"
+        SUBS = "Getting subscriptions operation was aborted"
+        SUB = "Subscribe operation was aborted"
+        UNSUB = "Unsubscribe operation was aborted"
+        TMPLT = "Changing template operation was aborted"
+        PCTR = "Changing picture mode operation was aborted"
+        NTFCTN = "Testing notification operation was aborted"
 
-    if action == "usrs":
+        USRS = ""
+        USRN = "Renaming user operation was aborted"
+        USRR = "Removing user operation was aborted"
+        USRSL = f"Current default limit: {cfg.TELEGRAM_LIMIT_DEFAULT}"
+        USRSLD = "Changing default limit operation was aborted"
+        USRL = "Changing user's limit operation was aborted"
+        DUMPC = "Creating dump operation was aborted"
+        DUMPR = "Restoring dump operation was aborted"
+        BMSG = "Broadcast messaging operation was aborted"
+
+        @classmethod
+        def _missing_(cls, _):
+            return cls.DEFAULT
+
+    action_text = ACTONS_TEXTS[callback_data.action.upper()]
+
+    if action_text.name == "USRS":
         with suppress(TelegramBadRequest):
             await callback.message.edit_reply_markup(reply_markup=None)
-        return
-    if action == "usrn":
-        action_text = "Renaming user"
-    if action == "usrr":
-        action_text = "Removing user"
-    if action == "usrsl":
+    else:
         with suppress(TelegramBadRequest):
-            await callback.message.edit_text(
-                text=f"Current default limit: {cfg.TELEGRAM_LIMIT_DEFAULT}",
-                reply_markup=None,
-            )
-        return
-    if action == "usrsld":
-        action_text = "Changing default limit"
-    if action == "usrl":
-        action_text = "Changing user's limit"
-    if action == "dump":
-        action_text = "Dump"
-    if action == "dumpr":
-        action_text = "Restoring dump"
-    if action == "bmsg":
-        action_text = "Broadcast messaging"
-
-    with suppress(TelegramBadRequest):
-        await callback.message.edit_text(
-            text=f"{action_text} operation was aborted".lstrip().capitalize(),
-            reply_markup=None,
-        )
+            await callback.message.edit_text(text=action_text.value, reply_markup=None)

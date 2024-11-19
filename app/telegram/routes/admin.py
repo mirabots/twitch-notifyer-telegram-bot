@@ -47,7 +47,7 @@ router = Router()
 async def admin_commands_handler(message: types.Message):
     message_text = "Available admin commands:"
     for command, description in COMMANDS_ADMIN.items():
-        message_text += f"\n● {description}\n○ {command}"
+        message_text += f"\n● {description}\n○ /{command}"
 
     with suppress(TelegramBadRequest):
         await message.answer(text=message_text)
@@ -478,7 +478,7 @@ async def costs_handler(message: types.Message):
 async def dump_handler(message: types.Message):
     main_keyboard = get_keyboard_dump()
     main_keyboard.adjust(2)
-    abort_keyboard = get_keyboard_abort("dump")
+    abort_keyboard = get_keyboard_abort("dumpc")
     main_keyboard.attach(abort_keyboard)
     with suppress(TelegramBadRequest):
         await message.answer(
