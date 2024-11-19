@@ -52,7 +52,7 @@ async def get_subscribed_chats(streamer_id: str) -> list[dict[str, int | str]]:
         ]
 
 
-async def get_subscribed_streames(chat_id: int) -> dict[str, str]:
+async def get_subscribed_streamers(chat_id: int) -> dict[str, str]:
     async with async_session() as session, session.begin():
         db_subscriptions = await session.scalars(
             select(Streamers)
@@ -62,6 +62,19 @@ async def get_subscribed_streames(chat_id: int) -> dict[str, str]:
                 )
             )
             .where(Subscriptions.chat_id == chat_id)
+        )
+        return {streamer.id: streamer.name for streamer in db_subscriptions}
+
+
+async def get_user_subscribed_streamers(user_id: int) -> dict[str, str]:
+    async with async_session() as session, session.begin():
+        db_subscriptions = await session.scalars(
+            select(Streamers)
+            .select_from(Subscriptions)
+            .join(Streamers, Streamers.id == Subscriptions.streamer_id)
+            .join(Chats, Chats.id == Subscriptions.chat_id)
+            .where(Chats.user_id == user_id)
+            .distinct()
         )
         return {streamer.id: streamer.name for streamer in db_subscriptions}
 

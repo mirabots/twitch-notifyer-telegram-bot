@@ -13,6 +13,9 @@ COMMANDS = [
     types.BotCommand(command="picture", description="Change notification picture mode"),
     types.BotCommand(command="notification_test", description="Test notification"),
     types.BotCommand(
+        command="online_streamers", description="Get currently online streamers"
+    ),
+    types.BotCommand(
         command="unsubscribe", description="Unsubscribe from stream notification"
     ),
     types.BotCommand(command="stop", description="Stop bot"),
