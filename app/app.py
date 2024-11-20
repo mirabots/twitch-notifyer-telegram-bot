@@ -101,6 +101,13 @@ async def lifespan_function(app: Litestar) -> AsyncGenerator[None, None]:
     try:
         yield
     finally:
+        if cfg.ENV != "dev":
+            with suppress(TelegramBadRequest):
+                await bot.send_message(
+                    chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                    text="ADMIN MESSAGE\nBOT WAS STOPPED",
+                )
+
         await bot.session.close()
         await _engine.dispose()
 

@@ -6,8 +6,8 @@ from twitch.api import (
     _auth,
     _get_channel_info,
     _get_costs,
-    _get_stream_info,
     _get_streamers_info,
+    _get_streams_info,
     _subscribe_event,
     _unsubscribe_event,
 )
@@ -66,7 +66,7 @@ async def get_streamers_names(streamers_ids: list[str]) -> dict[str, str]:
 
 
 async def get_stream_info(streamer_id: str) -> dict[str, str]:
-    answer = await _make_api_request(_get_stream_info, streamer_id)
+    answer = await _make_api_request(_get_streams_info, {"user_id": streamer_id})
     if answer.status_code != 200:
         cfg.logger.error(f"Getting streamer info error with code {answer.status_code}")
         return {}
@@ -79,6 +79,30 @@ async def get_stream_info(streamer_id: str) -> dict[str, str]:
         "category": answer_json["data"][0]["game_name"],
         "thumbnail_url": answer_json["data"][0]["thumbnail_url"],
     }
+
+
+async def get_streams_info(streamers_ids: list[str]) -> dict[str, str]:
+    result = {}
+    slice_size = 50
+    while streamers_ids:
+        streamers_ids_slice = streamers_ids[:slice_size]
+        answer = await _make_api_request(
+            _get_streams_info, {"user_id": streamers_ids_slice}
+        )
+
+        answer_json = answer.json()
+        if not answer_json.get("data"):
+            return {}
+        else:
+            result.update(
+                {
+                    stream["user_id"]: stream["user_name"]
+                    for stream in answer_json["data"]
+                }
+            )
+        del streamers_ids[:slice_size]
+
+    return result
 
 
 async def get_channel_info(streamer_id: str) -> dict[str, str]:

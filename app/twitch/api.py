@@ -48,7 +48,7 @@ async def _get_streamers_info(params: dict[str, str | list[str]]) -> httpx.Respo
         )
 
 
-async def _get_stream_info(streamer_id: str) -> httpx.Response:
+async def _get_streams_info(params: dict[str, str | list[str]]) -> httpx.Response:
     async with httpx.AsyncClient() as ac:
         return await ac.get(
             ROUTE_STREAMS,
@@ -56,7 +56,7 @@ async def _get_stream_info(streamer_id: str) -> httpx.Response:
                 "Client-Id": cfg.TWITCH_CLIENT_ID,
                 "Authorization": f"Bearer {cfg.TWITCH_BEARER}",
             },
-            params={"user_id": streamer_id},
+            params=params,
         )
 
 

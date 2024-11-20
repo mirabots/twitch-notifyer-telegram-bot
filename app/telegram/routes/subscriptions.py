@@ -185,19 +185,28 @@ async def subscriptions_handler(
         await callback.message.edit_text(
             text=f"Stream subscriptions list\n'{chat_name}' choosen", reply_markup=None
         )
-    streamers = await crud_subs.get_subscribed_streames(callback_data.id)
+    streamers = await crud_subs.get_subscribed_streamers(callback_data.id)
     if not streamers:
-        message_text = "No subscriptions"
+        message_text = formatting.Text("No subscriptions")
     else:
-        message_text = f"Count: ({len(streamers)})\n● " + "\n● ".join(
-            sorted(
-                list(streamers.values()),
-                key=lambda name: name.lower(),
-            )
+        message_text = formatting.as_marked_section(
+            formatting.Bold(f"Count: {len(streamers)}"),
+            *[
+                formatting.TextLink(name, url=f"https://twitch.tv/{name.lower()}")
+                for name in sorted(
+                    list(streamers.values()),
+                    key=lambda name: name.lower(),
+                )
+            ],
+            marker="● ",
         )
 
     with suppress(TelegramBadRequest):
-        await callback.message.answer(text=message_text, reply_markup=None)
+        await callback.message.answer(
+            **message_text.as_kwargs(),
+            link_preview_options=types.LinkPreviewOptions(is_disabled=True),
+            reply_markup=None,
+        )
 
 
 @router.callback_query(CallbackChooseChat.filter(F.action == "sub"))
@@ -292,7 +301,7 @@ async def unsubscribe_handler(
             text=f"Unsubscribe from stream notification\n'{chat_name}' choosen",
             reply_markup=None,
         )
-    streamers = await crud_subs.get_subscribed_streames(chat_id)
+    streamers = await crud_subs.get_subscribed_streamers(chat_id)
     if not streamers:
         with suppress(TelegramBadRequest):
             await callback.message.answer(text="No subscriptions", reply_markup=None)
@@ -344,7 +353,7 @@ async def template_handler(
             text=f"Change notification template\n'{chat_name}' choosen",
             reply_markup=None,
         )
-    streamers = await crud_subs.get_subscribed_streames(chat_id)
+    streamers = await crud_subs.get_subscribed_streamers(chat_id)
     if not streamers:
         with suppress(TelegramBadRequest):
             await callback.message.answer(text="No subscriptions", reply_markup=None)
@@ -451,7 +460,7 @@ async def picture_handler(
             text=f"Change notification picture mode\n'{chat_name}' choosen",
             reply_markup=None,
         )
-    streamers = await crud_subs.get_subscribed_streames(chat_id)
+    streamers = await crud_subs.get_subscribed_streamers(chat_id)
     if not streamers:
         with suppress(TelegramBadRequest):
             await callback.message.answer(text="No subscriptions", reply_markup=None)
@@ -586,7 +595,7 @@ async def notification_test_handler(
         await callback.message.edit_text(
             text=f"Test notification\n'{chat_name}' choosen", reply_markup=None
         )
-    streamers = await crud_subs.get_subscribed_streames(chat_id)
+    streamers = await crud_subs.get_subscribed_streamers(chat_id)
     if not streamers:
         with suppress(TelegramBadRequest):
             await callback.message.answer(text="No subscriptions", reply_markup=None)
@@ -680,3 +689,33 @@ async def notification_test_message_handler(
             )
     else:
         pass
+
+
+@router.message(Command("online_streamers"))
+async def online_streamers_handler(message: types.Message):
+    user_id = message.from_user.id
+    user_streamers = await crud_subs.get_user_subscribed_streamers(user_id)
+    if not user_streamers:
+        message_text = formatting.Text("No subscriptions")
+    else:
+        user_streamers_online = await twitch.get_streams_info(
+            list(user_streamers.keys())
+        )
+
+        message_text = formatting.as_marked_section(
+            formatting.Bold(f"Streamers online ({len(user_streamers_online)}):"),
+            *[
+                formatting.TextLink(name, url=f"https://twitch.tv/{name.lower()}")
+                for name in sorted(
+                    list(user_streamers_online.values()),
+                    key=lambda name: name.lower(),
+                )
+            ],
+            marker="● ",
+        )
+
+    with suppress(TelegramBadRequest):
+        await message.answer(
+            **message_text.as_kwargs(),
+            link_preview_options=types.LinkPreviewOptions(is_disabled=True),
+        )
