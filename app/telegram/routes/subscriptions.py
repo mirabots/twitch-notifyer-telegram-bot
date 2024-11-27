@@ -701,18 +701,20 @@ async def online_streamers_handler(message: types.Message):
         user_streamers_online = await twitch.get_streams_info(
             list(user_streamers.keys())
         )
-
-        message_text = formatting.as_marked_section(
-            formatting.Bold(f"Streamers online ({len(user_streamers_online)}):"),
-            *[
-                formatting.TextLink(name, url=f"https://twitch.tv/{name.lower()}")
-                for name in sorted(
-                    list(user_streamers_online.values()),
-                    key=lambda name: name.lower(),
-                )
-            ],
-            marker="● ",
-        )
+        if not user_streamers_online:
+            message_text = formatting.Text("No online streamers")
+        else:
+            message_text = formatting.as_marked_section(
+                formatting.Bold(f"Streamers online ({len(user_streamers_online)}):"),
+                *[
+                    formatting.TextLink(name, url=f"https://twitch.tv/{name.lower()}")
+                    for name in sorted(
+                        list(user_streamers_online.values()),
+                        key=lambda name: name.lower(),
+                    )
+                ],
+                marker="● ",
+            )
 
     with suppress(TelegramBadRequest):
         await message.answer(
