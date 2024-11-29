@@ -166,11 +166,10 @@ class ConfigManager:
 
     async def check_invite_code(self, code) -> bool:
         async with self.lock:
-            is_valid = False
-            if self.TELEGRAM_INVITE_CODE == code:
-                cfg.TELEGRAM_INVITE_CODE = generate_code()
-                is_valid = True
-            return is_valid
+            if self.TELEGRAM_INVITE_CODE != code:
+                return False
+            self.TELEGRAM_INVITE_CODE = generate_code()
+            return True
 
     async def update_limit_default(self, value: int) -> str:
         old_default_value = copy(self.TELEGRAM_LIMIT_DEFAULT)
