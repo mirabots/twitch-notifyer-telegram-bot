@@ -372,12 +372,10 @@ async def user_limit_handler(
 async def user_limit_action_handler(
     callback: types.CallbackQuery, callback_data: CallbackUserLimit, state: FSMContext
 ):
-    with suppress(TelegramBadRequest):
-        await callback.message.edit_reply_markup(reply_markup=None)
     user_id = callback_data.user_id
+    limit_action = callback_data.action
     await state.clear()
 
-    limit_action = callback_data.action
     new_limit = None
     if limit_action == "Default":
         new_limit = cfg.TELEGRAM_LIMIT_DEFAULT
@@ -386,7 +384,9 @@ async def user_limit_action_handler(
     await crud_users.update_user(user_id, {"limit": new_limit})
 
     with suppress(TelegramBadRequest):
-        await callback.answer(text="Limit was changed")
+        await callback.message.edit_text(
+            text=f"Limit was changed to '{limit_action}'", reply_markup=None
+        )
 
 
 @router.message(FormUserLimit.value)
