@@ -78,9 +78,9 @@ class ConfigManager:
     async def update_creds(self, updated_creds: dict) -> None:
         self.creds_data.update(updated_creds)
 
-        self.SECRETS_DOMAIN = self.data["secrets_domain"]
-        self.SECRETS_HEADER = self.data["secrets_header"]
-        self.SECRETS_TOKEN = self.data["secrets_token"]
+        self.SECRETS_DOMAIN = self.creds_data["secrets_domain"]
+        self.SECRETS_HEADER = self.creds_data["secrets_header"]
+        self.SECRETS_TOKEN = self.creds_data["secrets_token"]
 
         async with async_open(self._config_file, "w") as f:
             yaml.dump(self.creds_data, f)
