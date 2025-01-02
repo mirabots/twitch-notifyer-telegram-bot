@@ -72,6 +72,7 @@ async def start_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
         cfg.logger.info(
             f"Start channel (REJECTED): {user_id=} {user_name=} {chat_id=} {chat_title=}"
         )
+        await bot.leave_chat(chat_id)
         return
 
     cfg.logger.info(f"Start channel: {user_id=} {user_name=} {chat_id=} {chat_title=}")
