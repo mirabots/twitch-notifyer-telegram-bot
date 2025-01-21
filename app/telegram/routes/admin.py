@@ -18,6 +18,7 @@ from telegram.utils.callbacks import (
     CallbackChooseUser,
     CallbackDump,
     CallbackLimitDefault,
+    CallbackLimitDefaultUsersUpdate,
     CallbackUserLimit,
     CallbackUsersAction,
     get_choosed_callback_text,
@@ -33,6 +34,7 @@ from telegram.utils.keyboards import (
     get_keyboard_abort,
     get_keyboard_dump,
     get_keyboard_limit_default,
+    get_keyboard_limit_default_users_update,
     get_keyboard_user_limit,
     get_keyboard_users,
     get_keyboard_users_actions,
@@ -293,7 +295,7 @@ async def limit_default_handler(callback: types.CallbackQuery, state: FSMContext
 
 
 @router.message(FormLimitDefault.value)
-async def limit_default_form(
+async def limit_default_form_value(
     message: types.Message, state: FSMContext, bot: Bot
 ) -> None:
     state_data = await state.get_data()
@@ -305,24 +307,73 @@ async def limit_default_form(
             reply_markup=None,
         )
 
-    await state.clear()
-
-    message_text = "Default limit was changed"
+    message_text = ""
     try:
         value = int(message.text.rstrip())
         if value <= 0:
             message_text = "Value can't be 0 or lower"
         elif value > 10000:
             message_text = "Value can't more than cost limit (10000)"
-        else:
-            update_result = await cfg.update_limit_default(value)
-            if update_result:
-                message_text = f"Setting new default limit error:\n{update_result}"
     except Exception:
         message_text = "Value is not a number"
 
+    if message_text:
+        abort_keyboard = get_keyboard_abort("usrsld")
+        with suppress(TelegramBadRequest):
+            sended_message = await message.answer(
+                text=f"{message_text}\nEnter new default limit value:",
+                reply_markup=abort_keyboard.as_markup(),
+            )
+
+            await state.set_data(
+                {
+                    "outgoing_form_message_id": sended_message.message_id,
+                }
+            )
+            await state.set_state(FormLimitDefault.value)
+    else:
+        await state.clear()
+        main_keyboard = get_keyboard_limit_default_users_update(value)
+        main_keyboard.adjust(2)
+        abort_keyboard = get_keyboard_abort("usrsld")
+        main_keyboard.attach(abort_keyboard)
+        with suppress(TelegramBadRequest):
+            await message.answer(
+                text="Update users limites with old default value:",
+                reply_markup=main_keyboard.as_markup(),
+            )
+
+
+@router.callback_query(CallbackLimitDefaultUsersUpdate.filter())
+async def limit_default_callback_update_users(
+    callback: types.CallbackQuery,
+    callback_data: CallbackLimitDefaultUsersUpdate,
+    bot: Bot,
+) -> None:
+    value = callback_data.value
+    users_update = True if callback_data.action == "Yes" else False
+
     with suppress(TelegramBadRequest):
-        await message.answer(text=message_text)
+        await callback.message.edit_text(
+            text=f"Update users limites with old default value: '{callback_data.action}' choosen",
+            reply_markup=None,
+        )
+
+    message_text = "Default limit was changed"
+    old_limit = copy(cfg.TELEGRAM_LIMIT_DEFAULT)
+    update_result, updated_users = await cfg.update_limit_default(value, users_update)
+    for user in updated_users:
+        await crud_users.update_user(user, {"limit": cfg.TELEGRAM_LIMIT_DEFAULT})
+        with suppress(TelegramBadRequest):
+            await bot.send_message(
+                chat_id=user,
+                text=f"Your limit was changed from {old_limit} to {cfg.TELEGRAM_LIMIT_DEFAULT}",
+            )
+    if update_result:
+        message_text = f"Setting new default limit error:\n{update_result}"
+
+    with suppress(TelegramBadRequest):
+        await callback.message.answer(text=message_text)
 
 
 @router.callback_query(CallbackChooseUser.filter(F.action == "usrsl"))
@@ -370,7 +421,10 @@ async def user_limit_handler(
 
 @router.callback_query(CallbackUserLimit.filter())
 async def user_limit_action_handler(
-    callback: types.CallbackQuery, callback_data: CallbackUserLimit, state: FSMContext
+    callback: types.CallbackQuery,
+    callback_data: CallbackUserLimit,
+    state: FSMContext,
+    bot: Bot,
 ):
     user_id = callback_data.user_id
     limit_action = callback_data.action
@@ -380,8 +434,16 @@ async def user_limit_action_handler(
     if limit_action == "Default":
         new_limit = cfg.TELEGRAM_LIMIT_DEFAULT
 
+    old_limit = copy(cfg.TELEGRAM_USERS[user_id]["limit"])
+    old_limit_text = "Unlimited" if old_limit == None else old_limit
+    limit_text = "Unlimited" if limit_action == "Unlim" else new_limit
     cfg.TELEGRAM_USERS[user_id]["limit"] = new_limit
     await crud_users.update_user(user_id, {"limit": new_limit})
+    with suppress(TelegramBadRequest):
+        await bot.send_message(
+            chat_id=user_id,
+            text=f"Your limit was changed from {old_limit_text} to {limit_text}",
+        )
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(
@@ -400,23 +462,50 @@ async def user_limit_form(message: types.Message, state: FSMContext, bot: Bot) -
             reply_markup=None,
         )
     user_id = copy(state_data["user_id"])
-    await state.clear()
 
-    message_text = "Limit was changed"
+    message_text = ""
     try:
         new_limit_int = int(message.text.rstrip())
         if new_limit_int <= 0:
             message_text = "Value can't be 0 or lower"
         elif new_limit_int > 10000:
             message_text = "Value can't more than cost limit (10000)"
-        else:
-            cfg.TELEGRAM_USERS[user_id]["limit"] = new_limit_int
-            await crud_users.update_user(user_id, {"limit": new_limit_int})
     except Exception:
         message_text = "Value is not a number"
 
-    with suppress(TelegramBadRequest):
-        await message.answer(text=message_text)
+    if message_text:
+        main_keyboard = get_keyboard_user_limit(user_id)
+        main_keyboard.adjust(2)
+        abort_keyboard = get_keyboard_abort("usrl")
+        main_keyboard.attach(abort_keyboard)
+        with suppress(TelegramBadRequest):
+            sended_message = await message.answer(
+                text=f"{message_text}\nEnter new limit value:",
+                reply_markup=main_keyboard.as_markup(),
+            )
+
+            await state.set_data(
+                {
+                    "outgoing_form_message_id": sended_message.message_id,
+                    "user_id": user_id,
+                }
+            )
+            await state.set_state(FormUserLimit.value)
+    else:
+        await state.clear()
+
+        old_limit = copy(cfg.TELEGRAM_USERS[user_id]["limit"])
+        old_limit_text = "Unlimited" if old_limit == None else old_limit
+        cfg.TELEGRAM_USERS[user_id]["limit"] = new_limit_int
+        await crud_users.update_user(user_id, {"limit": new_limit_int})
+        with suppress(TelegramBadRequest):
+            await bot.send_message(
+                chat_id=user_id,
+                text=f"Your limit was changed from {old_limit_text} to {new_limit_int}",
+            )
+
+        with suppress(TelegramBadRequest):
+            await message.answer(text="Limit was changed")
 
 
 @router.message(Command("streamers"))

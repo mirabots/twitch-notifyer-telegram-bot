@@ -48,6 +48,11 @@ class CallbackLimitDefault(CallbackData, prefix="usrsld"):
     pass
 
 
+class CallbackLimitDefaultUsersUpdate(CallbackData, prefix="usrslduu"):
+    action: str
+    value: int
+
+
 class CallbackUserLimit(CallbackData, prefix="usrl"):
     action: str
     user_id: int

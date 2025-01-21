@@ -171,15 +171,21 @@ class ConfigManager:
             self.TELEGRAM_INVITE_CODE = generate_code()
             return True
 
-    async def update_limit_default(self, value: int) -> str:
+    async def update_limit_default(
+        self, value: int, users_update: bool
+    ) -> tuple[str, list[int]]:
         old_default_value = copy(self.TELEGRAM_LIMIT_DEFAULT)
         old_users_value = copy(self.TELEGRAM_USERS)
 
+        updated_users = []
+
         self.TELEGRAM_LIMIT_DEFAULT = value
         self.secrets_data[f"{self.ENV}/telegram"]["limit_default"] = value
-        for user in self.TELEGRAM_USERS:
-            if self.TELEGRAM_USERS[user]["limit"] == old_default_value:
-                self.TELEGRAM_USERS[user]["limit"] = value
+        if users_update:
+            for user in self.TELEGRAM_USERS:
+                if self.TELEGRAM_USERS[user]["limit"] == old_default_value:
+                    self.TELEGRAM_USERS[user]["limit"] = value
+                    updated_users.append(user)
 
         update_secrets_result = ""
         try:
@@ -202,7 +208,8 @@ class ConfigManager:
                 "limit_default"
             ] = old_default_value
             self.TELEGRAM_USERS = old_users_value
-        return update_secrets_result
+            updated_users = []
+        return update_secrets_result, updated_users
 
 
 cfg = ConfigManager()
