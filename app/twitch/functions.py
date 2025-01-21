@@ -81,7 +81,7 @@ async def get_stream_info(streamer_id: str) -> dict[str, str]:
     }
 
 
-async def get_streams_info(streamers_ids: list[str]) -> dict[str, str]:
+async def get_streams_info(streamers_ids: list[str]) -> dict[str, dict[str, str]]:
     result = {}
     slice_size = 50
     while streamers_ids:
@@ -96,7 +96,11 @@ async def get_streams_info(streamers_ids: list[str]) -> dict[str, str]:
         else:
             result.update(
                 {
-                    stream["user_id"]: stream["user_name"]
+                    stream["user_id"]: {
+                        "user_name": stream["user_name"],
+                        "title": stream["title"],
+                        "category": stream["game_name"],
+                    }
                     for stream in answer_json["data"]
                 }
             )
