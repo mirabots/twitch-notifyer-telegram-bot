@@ -1,25 +1,22 @@
-from aiogram import types
+from aiogram.types import BotCommand
 
 COMMANDS = [
-    types.BotCommand(command="info", description="Bot usage info"),
-    types.BotCommand(command="channels", description="Manage user channels"),
-    types.BotCommand(
-        command="subscriptions", description="Subscriptions list and limites"
-    ),
-    types.BotCommand(
-        command="subscribe", description="Subscribe to stream notification"
-    ),
-    types.BotCommand(command="template", description="Change notification template"),
-    types.BotCommand(command="picture", description="Change notification picture mode"),
-    types.BotCommand(command="notification_test", description="Test notification"),
-    types.BotCommand(
+    BotCommand(command="info", description="Bot usage info"),
+    BotCommand(command="channels", description="Manage user channels"),
+    BotCommand(command="subscriptions", description="Subscriptions list and limites"),
+    BotCommand(command="subscribe", description="Subscribe to stream notification"),
+    BotCommand(command="template", description="Change notification template"),
+    BotCommand(command="picture", description="Change notification picture mode"),
+    BotCommand(command="notification_test", description="Test notification"),
+    BotCommand(
         command="online_streamers", description="Get currently online streamers"
     ),
-    types.BotCommand(
+    BotCommand(
         command="unsubscribe", description="Unsubscribe from stream notification"
     ),
-    types.BotCommand(command="stop", description="Stop bot"),
-    types.BotCommand(command="admin", description="List of admin commands"),
+    BotCommand(command="limit_request", description="Request new subscription limit"),
+    BotCommand(command="stop", description="Stop bot"),
+    BotCommand(command="admin", description="List of admin commands"),
 ]
 
 COMMANDS_ADMIN = {
