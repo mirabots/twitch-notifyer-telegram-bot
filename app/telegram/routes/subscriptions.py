@@ -186,17 +186,31 @@ async def subscriptions_handler(
             text=f"Stream subscriptions list\n'{chat_name}' choosen", reply_markup=None
         )
     streamers = await crud_subs.get_subscribed_streamers(callback_data.id)
+    user_streamers_online = await twitch.get_streams_info(list(streamers.keys()))
     if not streamers:
         message_text = formatting.Text("No subscriptions")
     else:
+        streamers_sorted = sorted(
+            [
+                (
+                    streamers[id],
+                    user_streamers_online.get(id, {}).get("title"),
+                    user_streamers_online.get(id, {}).get("category"),
+                )
+                for id in streamers
+            ],
+            key=lambda tup: tup[0].lower(),
+        )
+
         message_text = formatting.as_marked_section(
             formatting.Bold(f"Count: {len(streamers)}"),
             *[
-                formatting.TextLink(name, url=f"https://twitch.tv/{name.lower()}")
-                for name in sorted(
-                    list(streamers.values()),
-                    key=lambda name: name.lower(),
+                formatting.Text(
+                    formatting.TextLink(name, url=f"https://twitch.tv/{name.lower()}"),
+                    f" ({category})" if category else "",
+                    f" — {title}" if title else "",
                 )
+                for name, title, category in streamers_sorted
             ],
             marker="● ",
         )
@@ -262,7 +276,7 @@ async def subscribe_form(message: types.Message, state: FSMContext, bot: Bot) ->
     chat_id = state_data["chat_id"]
     await state.clear()
 
-    streamer_login = message.text.rstrip().lower()
+    streamer_login = message.text.strip().lower()
     streamer_info = await twitch.get_streamer_info(streamer_login)
     if not streamer_info:
         with suppress(TelegramBadRequest):
@@ -704,14 +718,29 @@ async def online_streamers_handler(message: types.Message):
         if not user_streamers_online:
             message_text = formatting.Text("No online streamers")
         else:
+            user_streamers_online_sorted = sorted(
+                [
+                    (
+                        user_streamers_online[id]["user_name"],
+                        user_streamers_online[id]["title"],
+                        user_streamers_online[id]["category"],
+                    )
+                    for id in user_streamers_online
+                ],
+                key=lambda tup: tup[0].lower(),
+            )
+
             message_text = formatting.as_marked_section(
                 formatting.Bold(f"Streamers online ({len(user_streamers_online)}):"),
                 *[
-                    formatting.TextLink(name, url=f"https://twitch.tv/{name.lower()}")
-                    for name in sorted(
-                        list(user_streamers_online.values()),
-                        key=lambda name: name.lower(),
+                    formatting.Text(
+                        formatting.TextLink(
+                            name, url=f"https://twitch.tv/{name.lower()}"
+                        ),
+                        f" ({category})" if category else "",
+                        f" — {title}" if title else "",
                     )
+                    for name, title, category in user_streamers_online_sorted
                 ],
                 marker="● ",
             )
