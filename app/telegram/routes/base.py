@@ -199,6 +199,7 @@ async def abort_handler(
         TMPLT = "Changing template operation was aborted"
         PCTR = "Changing picture mode operation was aborted"
         NTFCTN = "Testing notification operation was aborted"
+        LRMSG = "Requesting new limit operation was aborted"
 
         USRS = ""
         USRN = "Renaming user operation was aborted"
