@@ -23,8 +23,8 @@ class CallbackAbort(CallbackData, prefix="abort"):
     action: str
 
 
-class CallbackDefault(CallbackData, prefix="dflt"):
-    action: str
+class CallbackTemplateMode(CallbackData, prefix="tm"):
+    choice_id: int
     streamer_id: str
     chat_id: int
 

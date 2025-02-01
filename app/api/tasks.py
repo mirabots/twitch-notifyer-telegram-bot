@@ -69,9 +69,11 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
         for chat in chats:
             template = Template(chat["template"] or "$streamer_name started stream")
             filled_template = template.safe_substitute({"streamer_name": streamer_name})
+            if chat["template"] == "":
+                filled_template = ""
 
             message = Text(
-                Bold(filled_template),
+                Bold(filled_template) if filled_template else "",
                 f"\n{stream_details}\n",
                 Bold(f"twitch.tv/{streamer_login}"),
             )

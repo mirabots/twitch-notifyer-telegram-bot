@@ -14,16 +14,19 @@ def verify_telegram_secret(headers: dict[str, str]) -> None:
 
 async def verify_twitch_secret(request: Request) -> None:
     body = (await request.body()).decode()
-    sended_HMAC = request.headers.get(
-        "Twitch-Eventsub-Message-Signature".lower()
+    sended_HMAC = (
+        request.headers.get("Twitch-Eventsub-Message-Signature".lower()) or ""
     ).lower()
     server_HMAC = (
         "sha256="
         + hmac.new(
-            cfg.TWITCH_SUBSCRIPTION_SECRET.encode(),
+            (cfg.TWITCH_SUBSCRIPTION_SECRET or "").encode(),
             (
-                request.headers.get("Twitch-Eventsub-Message-Id".lower())
-                + request.headers.get("Twitch-Eventsub-Message-Timestamp".lower())
+                (request.headers.get("Twitch-Eventsub-Message-Id".lower()) or "")
+                + (
+                    request.headers.get("Twitch-Eventsub-Message-Timestamp".lower())
+                    or ""
+                )
                 + body
             ).encode(),
             hashlib.sha256,
