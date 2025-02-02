@@ -7,11 +7,11 @@ from telegram.utils.callbacks import (
     CallbackChooseChat,
     CallbackChooseStreamer,
     CallbackChooseUser,
-    CallbackDefault,
     CallbackDump,
     CallbackLimitDefault,
     CallbackLimitDefaultUsersUpdate,
     CallbackPicture,
+    CallbackTemplateMode,
     CallbackUserLimit,
     CallbackUsersAction,
 )
@@ -52,16 +52,15 @@ def get_keyboard_abort(action: str, name: str = "Abort") -> InlineKeyboardBuilde
     return keyboard
 
 
-def get_keyboard_default(
-    action: str, streamer_id: str, chat_id: int
-) -> InlineKeyboardBuilder:
+def get_keyboard_template_mode(streamer_id: str, chat_id: int) -> InlineKeyboardBuilder:
     keyboard = InlineKeyboardBuilder()
-    keyboard.button(
-        text="Default",
-        callback_data=CallbackDefault(
-            action=action, streamer_id=streamer_id, chat_id=chat_id
-        ),
-    )
+    for id, choice in enumerate(("Default", "Empty")):
+        keyboard.button(
+            text=choice,
+            callback_data=CallbackTemplateMode(
+                choice_id=id, streamer_id=streamer_id, chat_id=chat_id
+            ),
+        )
     return keyboard
 
 

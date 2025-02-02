@@ -19,8 +19,8 @@ from telegram.utils.callbacks import (
     CallbackChooseChannel,
     CallbackChooseChat,
     CallbackChooseStreamer,
-    CallbackDefault,
     CallbackPicture,
+    CallbackTemplateMode,
     get_choosed_callback_text,
 )
 from telegram.utils.forms import FormChangeTemplate, FormPicture, FormSubscribe
@@ -29,9 +29,9 @@ from telegram.utils.keyboards import (
     get_keyboard_channels,
     get_keyboard_channels_remove,
     get_keyboard_chats,
-    get_keyboard_default,
     get_keyboard_picture,
     get_keyboard_streamers,
+    get_keyboard_template_mode,
 )
 from twitch import functions as twitch
 
@@ -399,8 +399,8 @@ async def template_streamer_handler(
             text=f"'{streamer_name}' choosen", reply_markup=None
         )
 
-    main_keyboard = get_keyboard_default(
-        callback_data.action, callback_data.streamer_id, callback_data.chat_id
+    main_keyboard = get_keyboard_template_mode(
+        callback_data.streamer_id, callback_data.chat_id
     )
     abort_keyboard = get_keyboard_abort(callback_data.action)
     main_keyboard.attach(abort_keyboard)
@@ -421,7 +421,7 @@ async def template_streamer_handler(
 
 
 @router.message(FormChangeTemplate.template_text)
-async def template_streamer_form(
+async def template_text_form(
     message: types.Message, state: FSMContext, bot: Bot
 ) -> None:
     state_data = await state.get_data()
@@ -443,19 +443,27 @@ async def template_streamer_form(
         await message.answer(text="New template was set")
 
 
-@router.callback_query(CallbackDefault.filter(F.action == "tmplt"))
-async def template_default_handler(
-    callback: types.CallbackQuery, callback_data: CallbackDefault, state: FSMContext
+@router.callback_query(CallbackTemplateMode.filter())
+async def template_mode_handler(
+    callback: types.CallbackQuery,
+    callback_data: CallbackTemplateMode,
+    state: FSMContext,
 ):
+    mode_name = get_choosed_callback_text(
+        callback.message.reply_markup.inline_keyboard, callback.data
+    )
     await state.clear()
 
+    new_template = None
+    if mode_name == "Empty":
+        new_template = ""
     await crud_subs.change_template(
-        callback_data.chat_id, callback_data.streamer_id, None
+        callback_data.chat_id, callback_data.streamer_id, new_template
     )
 
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(
-            text="Default template was set",
+            text=f"{mode_name} template was set",
             reply_markup=None,
         )
 
@@ -666,9 +674,11 @@ async def notification_test_message_handler(
 
     template = Template(sub_template or "$streamer_name started stream")
     filled_template = template.safe_substitute({"streamer_name": streamer_name})
+    if sub_template == "":
+        filled_template = ""
 
     message = formatting.Text(
-        formatting.Bold(filled_template),
+        formatting.Bold(filled_template) if filled_template else "",
         f"\n{stream_details}\n",
         formatting.Bold(f"twitch.tv/{streamer_login}"),
     )

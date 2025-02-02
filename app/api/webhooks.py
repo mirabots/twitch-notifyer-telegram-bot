@@ -38,7 +38,8 @@ async def webhook_telegram(data: dict[str, Any], headers: dict[str, str]) -> Any
 async def webhook_twitch(
     data: dict[str, Any], headers: dict[str, str], request: Request
 ) -> None | str:
-    await verify_twitch_secret(request)
+    if cfg.ENV != "dev":
+        await verify_twitch_secret(request)
     cfg.logger.debug(data)
 
     if data.get("subscription", {}).get("type", "").lower() != "stream.online":
