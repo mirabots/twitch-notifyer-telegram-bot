@@ -852,7 +852,7 @@ async def restreams_links_streamer_action_handler(
         abort_keyboard = get_keyboard_abort("rstrml")
         with suppress(TelegramBadRequest):
             sended_message = await callback.message.answer(
-                text="Send updated list of links, separated by new line:",
+                text="Send updated list (copy existing and modify) of links, separated by new line:",
                 reply_markup=abort_keyboard.as_markup(),
             )
             await state.set_data(
