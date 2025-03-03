@@ -817,7 +817,7 @@ async def restreams_links_streamer_handler(
     chat_id = callback_data.chat_id
 
     current_links = await crud_subs.get_current_restreams_links(chat_id, streamer_id)
-    current_links_string = "\n".join(current_links)
+    current_links_string = "\n".join(current_links or []) or "No links"
     with suppress(TelegramBadRequest):
         await callback.message.edit_text(
             text=f"'{streamer_name}' choosen", reply_markup=None
@@ -891,7 +891,6 @@ async def restreams_links_streamer_form(
     if not message.text:
         message_text = "No links were send\nNo changes"
     else:
-
         input_links = message.text.rstrip().split("\n")
         links = []
         for link in input_links:
@@ -899,7 +898,7 @@ async def restreams_links_streamer_form(
                 for prefix in ("https://www.", "http://www.", "https://", "http://"):
                     link = link.replace(prefix, "")
                     link = link.replace(prefix.upper(), "")
-                    links.append(link)
+                links.append(link)
 
         await crud_subs.change_restreams_links(chat_id, streamer_id, links)
     with suppress(TelegramBadRequest):
