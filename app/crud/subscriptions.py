@@ -47,6 +47,7 @@ async def get_subscribed_chats(streamer_id: str) -> list[dict[str, int | str]]:
                 "template": sub.message_template,
                 "picture_mode": sub.picture_mode,
                 "picture_id": sub.picture_id,
+                "restreams_links": sub.restreams_links,
             }
             for sub in db_subscriptions
         ]
@@ -147,6 +148,31 @@ async def change_picture_mode(
                 Subscriptions.streamer_id == streamer_id,
             )
             .values(picture_mode=picture_mode, picture_id=picture_id)
+        )
+
+
+async def get_current_restreams_links(chat_id: int, streamer_id: str) -> list[str]:
+    async with async_session() as session, session.begin():
+        db_subscription = await session.scalar(
+            select(Subscriptions).where(
+                Subscriptions.streamer_id == streamer_id,
+                Subscriptions.chat_id == chat_id,
+            )
+        )
+        return db_subscription.restreams_links
+
+
+async def change_restreams_links(
+    chat_id: int, streamer_id: str, links: list[str] | None
+) -> None:
+    async with async_session() as session, session.begin():
+        await session.execute(
+            update(Subscriptions)
+            .where(
+                Subscriptions.chat_id == chat_id,
+                Subscriptions.streamer_id == streamer_id,
+            )
+            .values(restreams_links=links)
         )
 
 

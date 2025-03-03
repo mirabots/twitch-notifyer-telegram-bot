@@ -177,6 +177,7 @@ async def info_handler(message: types.Message, bot: Bot):
             "Change notification picture mod: /picture and choose prefered view: "
             "Stream start screenshot, Own picture or Disabled"
         ),
+        "Change notification restreams links via /restreams_links",
         "Other commands can be found in command menu near text-input",
         marker="● ",
     )
@@ -198,6 +199,7 @@ async def abort_handler(
         UNSUB = "Unsubscribe operation was aborted"
         TMPLT = "Changing template operation was aborted"
         PCTR = "Changing picture mode operation was aborted"
+        RSTRML = "Changing restreams links operation was aborted"
         NTFCTN = "Testing notification operation was aborted"
 
         USRS = ""

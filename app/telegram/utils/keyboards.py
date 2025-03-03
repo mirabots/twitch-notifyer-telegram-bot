@@ -11,6 +11,7 @@ from telegram.utils.callbacks import (
     CallbackLimitDefault,
     CallbackLimitDefaultUsersUpdate,
     CallbackPicture,
+    CallbackRestreamsLinks,
     CallbackTemplateMode,
     CallbackUserLimit,
     CallbackUsersAction,
@@ -70,6 +71,20 @@ def get_keyboard_picture(streamer_id: str, chat_id: int) -> InlineKeyboardBuilde
         keyboard.button(
             text=choice,
             callback_data=CallbackPicture(
+                choice_id=id, streamer_id=streamer_id, chat_id=chat_id
+            ),
+        )
+    return keyboard
+
+
+def get_keyboard_restreams_links(
+    streamer_id: str, chat_id: int
+) -> InlineKeyboardBuilder:
+    keyboard = InlineKeyboardBuilder()
+    for id, choice in enumerate(("Update", "Remove all")):
+        keyboard.button(
+            text=choice,
+            callback_data=CallbackRestreamsLinks(
                 choice_id=id, streamer_id=streamer_id, chat_id=chat_id
             ),
         )

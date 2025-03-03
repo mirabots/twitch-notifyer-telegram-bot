@@ -72,10 +72,12 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
             if chat["template"] == "":
                 filled_template = ""
 
+            links = [f"twitch.tv/{streamer_login}", *(chat["restreams_links"] or [])]
+
             message = Text(
                 Bold(filled_template) if filled_template else "",
                 f"\n{stream_details}\n",
-                Bold(f"twitch.tv/{streamer_login}"),
+                Bold("\n".join(links)),
             )
             message_text, message_entities = message.render()
 
