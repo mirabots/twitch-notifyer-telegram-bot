@@ -81,7 +81,7 @@ def get_keyboard_restreams_links(
     streamer_id: str, chat_id: int
 ) -> InlineKeyboardBuilder:
     keyboard = InlineKeyboardBuilder()
-    for id, choice in enumerate(("Update", "Remove all")):
+    for id, choice in enumerate(("Add / Update", "Remove all")):
         keyboard.button(
             text=choice,
             callback_data=CallbackRestreamsLinks(

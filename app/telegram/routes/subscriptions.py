@@ -848,11 +848,11 @@ async def restreams_links_streamer_action_handler(
     with suppress(TelegramBadRequest):
         await callback.message.edit_reply_markup(reply_markup=None)
 
-    if links_action == "Update":
+    if links_action == "Add / Update":
         abort_keyboard = get_keyboard_abort("rstrml")
         with suppress(TelegramBadRequest):
             sended_message = await callback.message.answer(
-                text="Send updated list of links, separated by new line (copy existing and modify):",
+                text="Send list of links, separated by new line (if update copy existing and modify):",
                 reply_markup=abort_keyboard.as_markup(),
             )
             await state.set_data(
@@ -866,7 +866,7 @@ async def restreams_links_streamer_action_handler(
     else:
         await crud_subs.change_restreams_links(chat_id, streamer_id, None)
         with suppress(TelegramBadRequest):
-            await callback.message.answer(text="Restreams links were removed")
+            await callback.message.answer(text="Links were removed")
 
 
 @router.message(FormRestreamsLinks.updated_links)
@@ -895,10 +895,11 @@ async def restreams_links_streamer_form(
         input_links = message.text.rstrip().split("\n")
         links = []
         for link in input_links:
-            for prefix in ("https://www.", "http://www.", "https://", "http://"):
-                link = link.replace(prefix, "")
-                link = link.replace(prefix.upper(), "")
-                links.append(link)
+            if link:
+                for prefix in ("https://www.", "http://www.", "https://", "http://"):
+                    link = link.replace(prefix, "")
+                    link = link.replace(prefix.upper(), "")
+                    links.append(link)
 
         await crud_subs.change_restreams_links(chat_id, streamer_id, links)
     with suppress(TelegramBadRequest):
