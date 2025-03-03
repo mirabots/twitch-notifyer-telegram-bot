@@ -31,3 +31,7 @@ class FormPicture(StatesGroup):
 
 class FormBroadcastMessage(StatesGroup):
     message = State()
+
+
+class FormlimitRequestMessage(StatesGroup):
+    message = State()

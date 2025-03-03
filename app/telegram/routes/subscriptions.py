@@ -23,7 +23,12 @@ from telegram.utils.callbacks import (
     CallbackTemplateMode,
     get_choosed_callback_text,
 )
-from telegram.utils.forms import FormChangeTemplate, FormPicture, FormSubscribe
+from telegram.utils.forms import (
+    FormChangeTemplate,
+    FormlimitRequestMessage,
+    FormPicture,
+    FormSubscribe,
+)
 from telegram.utils.keyboards import (
     get_keyboard_abort,
     get_keyboard_channels,
@@ -158,7 +163,7 @@ async def chats_handler(message: types.Message, bot: Bot):
         subs_limit = cfg.TELEGRAM_USERS[user_id]["limit"]
         with suppress(TelegramBadRequest):
             await message.answer(
-                text=f"Subs count: {subs_count} ({subs_count_unique} unique) / {subs_limit}\n"
+                text=f"Subs count: {subs_count} ({subs_count_unique} unique) / {subs_limit}"
             )
 
         if action == "sub":
@@ -760,3 +765,93 @@ async def online_streamers_handler(message: types.Message):
             **message_text.as_kwargs(),
             link_preview_options=types.LinkPreviewOptions(is_disabled=True),
         )
+
+
+@router.message(Command("limit_request"))
+async def limit_request_handler(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    subs_count, subs_count_unique = await crud_subs.get_user_subscription_count(user_id)
+    subs_limit = cfg.TELEGRAM_USERS[user_id]["limit"]
+    with suppress(TelegramBadRequest):
+        await message.answer(
+            text=f"Subs count: {subs_count} ({subs_count_unique} unique) / {subs_limit}"
+        )
+    abort_keyboard = get_keyboard_abort("lrmsg")
+    with suppress(TelegramBadRequest):
+        sended_message = await message.answer(
+            text="Send limit request message to admin:",
+            reply_markup=abort_keyboard.as_markup(),
+        )
+
+        await state.set_data({"outgoing_form_message_id": sended_message.message_id})
+        await state.set_state(FormlimitRequestMessage.message)
+
+
+@router.message(FormlimitRequestMessage.message)
+async def limit_request_form(
+    message: types.Message, state: FSMContext, bot: Bot
+) -> None:
+    state_data = await state.get_data()
+    outgoing_form_message_id = state_data["outgoing_form_message_id"]
+    with suppress(TelegramBadRequest):
+        await bot.edit_message_reply_markup(
+            chat_id=message.chat.id,
+            message_id=outgoing_form_message_id,
+            reply_markup=None,
+        )
+    await state.clear()
+
+    answer_text = "Request was send"
+    message_text = message.text or ""
+    message_entities = message.entities or None
+    if not message_text:
+        answer_text = "Can't send empty message!"
+    else:
+        user_id = message.from_user.id
+        user_name = cfg.TELEGRAM_USERS[user_id]["name"]
+        admin_text = f"LIMIT REQUEST FROM {user_name} ({user_id}):\n"
+
+        if message_entities:
+            for entity in message_entities:
+                entity.offset += len(admin_text.encode("utf-16-le").decode("utf-16-le"))
+
+        with suppress(TelegramBadRequest):
+            await bot.send_message(
+                chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                text=f"{admin_text}{message_text}",
+                entities=message_entities,
+                link_preview_options=types.LinkPreviewOptions(is_disabled=True),
+            )
+
+    with suppress(TelegramBadRequest):
+        await message.answer(text=answer_text)
+
+
+@router.message(FormlimitRequestMessage.message)
+async def limit_request_form2(
+    message: types.Message, state: FSMContext, bot: Bot
+) -> None:
+    state_data = await state.get_data()
+    outgoing_form_message_id = state_data["outgoing_form_message_id"]
+    with suppress(TelegramBadRequest):
+        await bot.edit_message_reply_markup(
+            chat_id=message.chat.id,
+            message_id=outgoing_form_message_id,
+            reply_markup=None,
+        )
+    await state.clear()
+
+    answer_text = "Request was send"
+    message_text = message.text or ""
+    message_entities = message.entities or None
+    if not message_text:
+        answer_text = "Can't send empty message!"
+    else:
+        crud.add_request(  # noqa
+            message.from_user.id,
+            message_text,
+            message_entities.model_dump() if message_entities else None,
+        )
+
+    with suppress(TelegramBadRequest):
+        await message.answer(text=answer_text)

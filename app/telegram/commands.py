@@ -14,6 +14,7 @@ COMMANDS = [
     BotCommand(
         command="unsubscribe", description="Unsubscribe from stream notification"
     ),
+    BotCommand(command="limit_request", description="Request new subscription limit"),
     BotCommand(command="stop", description="Stop bot"),
     BotCommand(command="admin", description="List of admin commands"),
 ]
