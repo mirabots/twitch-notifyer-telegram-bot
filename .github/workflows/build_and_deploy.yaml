@@ -1,5 +1,5 @@
 name: Build and deploy app
-run-name: Build and deploy app from branch ${{ github.ref_name }} to ${{ inputs.target }} env with ${{ inputs.docker_port }} port
+run-name: Build and deploy app to ${{ inputs.target }} env with ${{ inputs.docker_port }} port
 
 on:
   workflow_dispatch:
@@ -106,7 +106,7 @@ jobs:
             tar -xf ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}.tar -C ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}/
             cd ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}/
             export TNTB_DB_DSN=${{ env.TNTB__DB_DSN }}
-            python3 -m alembic upgrade head
+            python3.10 -m alembic upgrade head
             cd ~
             rm ~/builds/${{ env.TNTB_NAME }}-${{ env.TNTB_ENV }}.tar
 
