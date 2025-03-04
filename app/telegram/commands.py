@@ -7,6 +7,9 @@ COMMANDS = [
     BotCommand(command="subscribe", description="Subscribe to stream notification"),
     BotCommand(command="template", description="Change notification template"),
     BotCommand(command="picture", description="Change notification picture mode"),
+    BotCommand(
+        command="restreams_links", description="Change notification restreams links"
+    ),
     BotCommand(command="notification_test", description="Test notification"),
     BotCommand(
         command="online_streamers", description="Get currently online streamers"

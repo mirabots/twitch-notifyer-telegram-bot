@@ -20,16 +20,23 @@ from telegram.utils.callbacks import (
     CallbackChooseChat,
     CallbackChooseStreamer,
     CallbackPicture,
+    CallbackRestreamsLinks,
     CallbackTemplateMode,
     get_choosed_callback_text,
 )
-from telegram.utils.forms import FormChangeTemplate, FormPicture, FormSubscribe
+from telegram.utils.forms import (
+    FormChangeTemplate,
+    FormPicture,
+    FormRestreamsLinks,
+    FormSubscribe,
+)
 from telegram.utils.keyboards import (
     get_keyboard_abort,
     get_keyboard_channels,
     get_keyboard_channels_remove,
     get_keyboard_chats,
     get_keyboard_picture,
+    get_keyboard_restreams_links,
     get_keyboard_streamers,
     get_keyboard_template_mode,
 )
@@ -123,6 +130,7 @@ async def user_channel_remove_handler(
 @router.message(Command("unsubscribe"))
 @router.message(Command("template"))
 @router.message(Command("picture"))
+@router.message(Command("restreams_links"))
 @router.message(Command("notification_test"))
 async def chats_handler(message: types.Message, bot: Bot):
     command = get_command(message.text)
@@ -136,6 +144,7 @@ async def chats_handler(message: types.Message, bot: Bot):
         UNSUBSCRIBE = ACTONS_TEXTS("unsub", "Unsubscribe from stream notification")
         TEMPLATE = ACTONS_TEXTS("tmplt", "Change notification template")
         PICTURE = ACTONS_TEXTS("pctr", "Change notification picture mode")
+        RESTREAMS_LINKS = ACTONS_TEXTS("rstrml", "Change notification restreams links")
         NOTIFICATION_TEST = ACTONS_TEXTS("ntfctn", "Test notification")
 
     action, action_string = ACTONS[command.upper()].value
@@ -658,6 +667,7 @@ async def notification_test_message_handler(
     sub_template = subscription_info.message_template
     sub_picture_mode = subscription_info.picture_mode
     sub_picture_id = subscription_info.picture_id
+    sub_restreams_links = subscription_info.restreams_links
 
     stream_info = await twitch.get_channel_info(streamer_id)
     stream_info["thumbnail_url"] = (
@@ -677,10 +687,12 @@ async def notification_test_message_handler(
     if sub_template == "":
         filled_template = ""
 
+    links = [f"twitch.tv/{streamer_login}", *(sub_restreams_links or [])]
+
     message = formatting.Text(
         formatting.Bold(filled_template) if filled_template else "",
         f"\n{stream_details}\n",
-        formatting.Bold(f"twitch.tv/{streamer_login}"),
+        formatting.Bold("\n".join(links)),
     )
     message_text, message_entities = message.render()
 
@@ -760,3 +772,134 @@ async def online_streamers_handler(message: types.Message):
             **message_text.as_kwargs(),
             link_preview_options=types.LinkPreviewOptions(is_disabled=True),
         )
+
+
+@router.callback_query(CallbackChooseChat.filter(F.action == "rstrml"))
+async def restreams_links_handler(
+    callback: types.CallbackQuery, callback_data: CallbackChooseChat
+):
+    chat_id = callback_data.id
+    chat_name = get_choosed_callback_text(
+        callback.message.reply_markup.inline_keyboard, callback.data
+    )
+
+    with suppress(TelegramBadRequest):
+        await callback.message.edit_text(
+            text=f"Change notification restreams links\n'{chat_name}' choosen",
+            reply_markup=None,
+        )
+    streamers = await crud_subs.get_subscribed_streamers(chat_id)
+    if not streamers:
+        with suppress(TelegramBadRequest):
+            await callback.message.answer(text="No subscriptions", reply_markup=None)
+    else:
+        main_keyboard = get_keyboard_streamers("rstrml", streamers, chat_id)
+        main_keyboard.adjust(3)
+        abort_keyboard = get_keyboard_abort(callback_data.action)
+        main_keyboard.attach(abort_keyboard)
+
+        with suppress(TelegramBadRequest):
+            await callback.message.answer(
+                text="Choose streamer:",
+                reply_markup=main_keyboard.as_markup(),
+            )
+
+
+@router.callback_query(CallbackChooseStreamer.filter(F.action == "rstrml"))
+async def restreams_links_streamer_handler(
+    callback: types.CallbackQuery,
+    callback_data: CallbackChooseStreamer,
+):
+    streamer_name = get_choosed_callback_text(
+        callback.message.reply_markup.inline_keyboard, callback.data
+    )
+    streamer_id = callback_data.streamer_id
+    chat_id = callback_data.chat_id
+
+    current_links = await crud_subs.get_current_restreams_links(chat_id, streamer_id)
+    current_links_string = "\n".join(current_links or []) or "No links"
+    with suppress(TelegramBadRequest):
+        await callback.message.edit_text(
+            text=f"'{streamer_name}' choosen", reply_markup=None
+        )
+    main_keyboard = get_keyboard_restreams_links(streamer_id, chat_id)
+    abort_keyboard = get_keyboard_abort(callback_data.action)
+    main_keyboard.attach(abort_keyboard)
+    with suppress(TelegramBadRequest):
+        await callback.message.answer(
+            text=f"Current links:\n{current_links_string}",
+            reply_markup=main_keyboard.as_markup(),
+            link_preview_options=types.LinkPreviewOptions(is_disabled=True),
+        )
+
+
+@router.callback_query(CallbackRestreamsLinks.filter())
+async def restreams_links_streamer_action_handler(
+    callback: types.CallbackQuery,
+    callback_data: CallbackRestreamsLinks,
+    state: FSMContext,
+) -> None:
+    links_action = get_choosed_callback_text(
+        callback.message.reply_markup.inline_keyboard, callback.data
+    )
+    streamer_id = callback_data.streamer_id
+    chat_id = callback_data.chat_id
+
+    with suppress(TelegramBadRequest):
+        await callback.message.edit_reply_markup(reply_markup=None)
+
+    if links_action == "Add / Update":
+        abort_keyboard = get_keyboard_abort("rstrml")
+        with suppress(TelegramBadRequest):
+            sended_message = await callback.message.answer(
+                text="Send list of links, separated by new line (if update copy existing and modify):",
+                reply_markup=abort_keyboard.as_markup(),
+            )
+            await state.set_data(
+                {
+                    "chat_id": chat_id,
+                    "streamer_id": streamer_id,
+                    "outgoing_form_message_id": sended_message.message_id,
+                }
+            )
+            await state.set_state(FormRestreamsLinks.updated_links)
+    else:
+        await crud_subs.change_restreams_links(chat_id, streamer_id, None)
+        with suppress(TelegramBadRequest):
+            await callback.message.answer(text="Links were removed")
+
+
+@router.message(FormRestreamsLinks.updated_links)
+async def restreams_links_streamer_form(
+    message: types.Message, state: FSMContext, bot: Bot
+) -> None:
+    state_data = await state.get_data()
+    outgoing_form_message_id = state_data["outgoing_form_message_id"]
+
+    with suppress(TelegramBadRequest):
+        await bot.edit_message_reply_markup(
+            chat_id=message.chat.id,
+            message_id=outgoing_form_message_id,
+            reply_markup=None,
+        )
+
+    chat_id = state_data["chat_id"]
+    streamer_id = state_data["streamer_id"]
+    await state.clear()
+
+    message_text = "Links were updated"
+    if not message.text:
+        message_text = "No links were send\nNo changes"
+    else:
+        input_links = message.text.rstrip().split("\n")
+        links = []
+        for link in input_links:
+            if link:
+                for prefix in ("https://www.", "http://www.", "https://", "http://"):
+                    link = link.replace(prefix, "")
+                    link = link.replace(prefix.upper(), "")
+                links.append(link)
+
+        await crud_subs.change_restreams_links(chat_id, streamer_id, links)
+    with suppress(TelegramBadRequest):
+        await message.answer(text=message_text)

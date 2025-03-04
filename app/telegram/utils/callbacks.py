@@ -35,6 +35,12 @@ class CallbackPicture(CallbackData, prefix="pctr"):
     chat_id: int
 
 
+class CallbackRestreamsLinks(CallbackData, prefix="rsl"):
+    choice_id: int
+    streamer_id: str
+    chat_id: int
+
+
 class CallbackUsersAction(CallbackData, prefix="usrsact"):
     action: str
 

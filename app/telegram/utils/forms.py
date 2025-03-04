@@ -29,5 +29,9 @@ class FormPicture(StatesGroup):
     new_picture = State()
 
 
+class FormRestreamsLinks(StatesGroup):
+    updated_links = State()
+
+
 class FormBroadcastMessage(StatesGroup):
     message = State()
