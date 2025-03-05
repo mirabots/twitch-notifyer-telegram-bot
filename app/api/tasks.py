@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 from contextlib import suppress
 from datetime import datetime, timezone
@@ -88,6 +89,7 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                         text=message_text,
                         entities=message_entities,
                         link_preview_options=types.LinkPreviewOptions(is_disabled=True),
+                        request_timeout=120.0,
                     )
             elif chat["picture_mode"] == "Stream start screenshot":
                 stream_picture = None
@@ -108,6 +110,7 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                         photo=(stream_picture_id or stream_picture),
                         caption=message_text,
                         caption_entities=message_entities,
+                        request_timeout=120.0,
                     )
                 if stream_picture_id == None:
                     file_size = 0
@@ -121,9 +124,13 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                         photo=chat["picture_id"],
                         caption=message_text,
                         caption_entities=message_entities,
+                        request_timeout=120.0,
                     )
             else:
                 pass
+
+            cfg.logger.info(f"Chat {chat['id']} sended with {chat['picture_mode']}")
+            await asyncio.sleep(1)
     except Exception as exc:
         if cfg.ENV != "dev":
             with suppress(TelegramBadRequest):
@@ -166,6 +173,7 @@ async def revoke_subscriptions(event: dict) -> None:
                 await bot.send_message(
                     chat_id=user, text=message_text, entities=message_entities
                 )
+            await asyncio.sleep(1)
         if cfg.TELEGRAM_BOT_OWNER_ID not in users:
             message = Text(
                 "ADMIN MESSAGE\nSubscription to ",

@@ -1,3 +1,4 @@
+import asyncio
 import json
 from contextlib import suppress
 from copy import copy
@@ -369,6 +370,7 @@ async def limit_default_callback_update_users(
                 chat_id=user,
                 text=f"Your limit was changed from {old_limit} to {cfg.TELEGRAM_LIMIT_DEFAULT}",
             )
+        await asyncio.sleep(1)
     if update_result:
         message_text = f"Setting new default limit error:\n{update_result}"
 
@@ -702,6 +704,7 @@ async def broadcast_message_form(
                                 is_disabled=True
                             ),
                         )
+                await asyncio.sleep(1)
 
     with suppress(TelegramBadRequest):
         await message.answer(text=admin_message)
