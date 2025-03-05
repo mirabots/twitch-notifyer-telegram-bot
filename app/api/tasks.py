@@ -88,6 +88,7 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                         text=message_text,
                         entities=message_entities,
                         link_preview_options=types.LinkPreviewOptions(is_disabled=True),
+                        request_timeout=120.0,
                     )
             elif chat["picture_mode"] == "Stream start screenshot":
                 stream_picture = None
@@ -108,6 +109,7 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                         photo=(stream_picture_id or stream_picture),
                         caption=message_text,
                         caption_entities=message_entities,
+                        request_timeout=120.0,
                     )
                 if stream_picture_id == None:
                     file_size = 0
@@ -121,6 +123,7 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                         photo=chat["picture_id"],
                         caption=message_text,
                         caption_entities=message_entities,
+                        request_timeout=120.0,
                     )
             else:
                 pass
