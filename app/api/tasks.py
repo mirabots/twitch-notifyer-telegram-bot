@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 from contextlib import suppress
 from datetime import datetime, timezone
@@ -129,6 +130,7 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                 pass
 
             cfg.logger.info(f"Chat {chat['id']} sended with {chat['picture_mode']}")
+            await asyncio.sleep(1)
     except Exception as exc:
         if cfg.ENV != "dev":
             with suppress(TelegramBadRequest):
@@ -171,6 +173,7 @@ async def revoke_subscriptions(event: dict) -> None:
                 await bot.send_message(
                     chat_id=user, text=message_text, entities=message_entities
                 )
+            await asyncio.sleep(1)
         if cfg.TELEGRAM_BOT_OWNER_ID not in users:
             message = Text(
                 "ADMIN MESSAGE\nSubscription to ",
