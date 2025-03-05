@@ -127,6 +127,8 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                     )
             else:
                 pass
+
+            cfg.logger.info(f"Chat {chat['id']} sended with {chat['picture_mode']}")
     except Exception as exc:
         if cfg.ENV != "dev":
             with suppress(TelegramBadRequest):
