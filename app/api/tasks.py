@@ -69,7 +69,6 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
 
         for chat in chats:
             try:
-                print(1 / 0)
                 template = Template(chat["template"] or "$streamer_name started stream")
                 filled_template = template.safe_substitute(
                     {"streamer_name": streamer_name}
