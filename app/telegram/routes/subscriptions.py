@@ -645,7 +645,7 @@ async def notification_test_handler(
 
 @router.callback_query(CallbackChooseStreamer.filter(F.action == "ntfctn"))
 async def notification_test_message_handler(
-    callback: types.CallbackQuery, callback_data: CallbackChooseStreamer
+    callback: types.CallbackQuery, callback_data: CallbackChooseStreamer, bot: Bot
 ):
     streamer_name = get_choosed_callback_text(
         callback.message.reply_markup.inline_keyboard, callback.data
@@ -698,10 +698,12 @@ async def notification_test_message_handler(
 
     if sub_picture_mode == "Disabled":
         with suppress(TelegramBadRequest):
-            await callback.message.answer(
+            await bot.send_message(
+                chat_id=callback.message.chat.id,
                 text=message_text,
                 entities=message_entities,
                 link_preview_options=types.LinkPreviewOptions(is_disabled=True),
+                request_timeout=180.0,
             )
     elif sub_picture_mode == "Stream start screenshot":
         utc_now = datetime.now(tz=timezone.utc).strftime("%Y_%m_%d_%H_%M_%S")
@@ -711,17 +713,21 @@ async def notification_test_message_handler(
         )
 
         with suppress(TelegramBadRequest):
-            await callback.message.answer_photo(
+            await bot.send_photo(
+                chat_id=callback.message.chat.id,
                 photo=stream_picture,
                 caption=message_text,
                 caption_entities=message_entities,
+                request_timeout=180.0,
             )
     elif sub_picture_mode == "Own pic":
         with suppress(TelegramBadRequest):
-            await callback.message.answer_photo(
+            await bot.send_photo(
+                chat_id=callback.message.chat.id,
                 photo=sub_picture_id,
                 caption=message_text,
                 caption_entities=message_entities,
+                request_timeout=180.0,
             )
     else:
         pass

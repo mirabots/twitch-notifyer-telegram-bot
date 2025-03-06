@@ -1,5 +1,6 @@
 import asyncio
 import json
+import traceback
 from contextlib import suppress
 from copy import copy
 from datetime import datetime, timezone
@@ -364,12 +365,19 @@ async def limit_default_callback_update_users(
     old_limit = copy(cfg.TELEGRAM_LIMIT_DEFAULT)
     update_result, updated_users = await cfg.update_limit_default(value, users_update)
     for user in updated_users:
-        await crud_users.update_user(user, {"limit": cfg.TELEGRAM_LIMIT_DEFAULT})
-        with suppress(TelegramBadRequest):
-            await bot.send_message(
-                chat_id=user,
-                text=f"Your limit was changed from {old_limit} to {cfg.TELEGRAM_LIMIT_DEFAULT}",
-            )
+        try:
+            await crud_users.update_user(user, {"limit": cfg.TELEGRAM_LIMIT_DEFAULT})
+            with suppress(TelegramBadRequest):
+                await bot.send_message(
+                    chat_id=user,
+                    text=f"Your limit was changed from {old_limit} to {cfg.TELEGRAM_LIMIT_DEFAULT}",
+                )
+        except Exception as exc:
+            if cfg.ENV != "dev":
+                with suppress(TelegramBadRequest):
+                    await callback.message.answer(text=f"ERROR\nTO {user}\n{exc}")
+            cfg.logger.error(exc)
+            traceback.print_exception(exc)
         await asyncio.sleep(1)
     if update_result:
         message_text = f"Setting new default limit error:\n{update_result}"
@@ -686,24 +694,31 @@ async def broadcast_message_form(
     else:
         for user_id in cfg.TELEGRAM_USERS:
             if user_id != cfg.TELEGRAM_BOT_OWNER_ID:
-                if picture_id:
-                    with suppress(TelegramBadRequest):
-                        await bot.send_photo(
-                            chat_id=user_id,
-                            photo=picture_id,
-                            caption=message_text,
-                            caption_entities=message_entities,
-                        )
-                else:
-                    with suppress(TelegramBadRequest):
-                        await bot.send_message(
-                            chat_id=user_id,
-                            text=message_text,
-                            entities=message_entities,
-                            link_preview_options=types.LinkPreviewOptions(
-                                is_disabled=True
-                            ),
-                        )
+                try:
+                    if picture_id:
+                        with suppress(TelegramBadRequest):
+                            await bot.send_photo(
+                                chat_id=user_id,
+                                photo=picture_id,
+                                caption=message_text,
+                                caption_entities=message_entities,
+                            )
+                    else:
+                        with suppress(TelegramBadRequest):
+                            await bot.send_message(
+                                chat_id=user_id,
+                                text=message_text,
+                                entities=message_entities,
+                                link_preview_options=types.LinkPreviewOptions(
+                                    is_disabled=True
+                                ),
+                            )
+                except Exception as exc:
+                    if cfg.ENV != "dev":
+                        with suppress(TelegramBadRequest):
+                            await message.answer(text=f"ERROR\nTO {user_id}\n{exc}")
+                    cfg.logger.error(exc)
+                    traceback.print_exception(exc)
                 await asyncio.sleep(1)
 
     with suppress(TelegramBadRequest):
