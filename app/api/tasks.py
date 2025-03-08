@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 from contextlib import suppress
 from datetime import datetime, timezone
@@ -67,69 +68,92 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
         cfg.logger.info(f"Chats: {[chat['id'] for chat in chats]}")
 
         for chat in chats:
-            template = Template(chat["template"] or "$streamer_name started stream")
-            filled_template = template.safe_substitute({"streamer_name": streamer_name})
-            if chat["template"] == "":
-                filled_template = ""
+            try:
+                template = Template(chat["template"] or "$streamer_name started stream")
+                filled_template = template.safe_substitute(
+                    {"streamer_name": streamer_name}
+                )
+                if chat["template"] == "":
+                    filled_template = ""
 
-            links = [f"twitch.tv/{streamer_login}", *(chat["restreams_links"] or [])]
+                links = [
+                    f"twitch.tv/{streamer_login}",
+                    *(chat["restreams_links"] or []),
+                ]
 
-            message = Text(
-                Bold(filled_template) if filled_template else "",
-                f"\n{stream_details}\n",
-                Bold("\n".join(links)),
-            )
-            message_text, message_entities = message.render()
+                message = Text(
+                    Bold(filled_template) if filled_template else "",
+                    f"\n{stream_details}\n",
+                    Bold("\n".join(links)),
+                )
+                message_text, message_entities = message.render()
 
-            if chat["picture_mode"] == "Disabled":
-                with suppress(TelegramBadRequest):
-                    await bot.send_message(
-                        chat_id=chat["id"],
-                        text=message_text,
-                        entities=message_entities,
-                        link_preview_options=types.LinkPreviewOptions(is_disabled=True),
-                    )
-            elif chat["picture_mode"] == "Stream start screenshot":
-                stream_picture = None
-                if stream_picture_id == None:
-                    utc_now = datetime.now(tz=timezone.utc).strftime(
-                        "%Y_%m_%d_%H_%M_%S"
-                    )
-                    stream_picture = types.URLInputFile(
-                        stream_info["thumbnail_url"].format(
-                            width="1920", height="1080"
-                        ),
-                        filename=f"{streamer_login}_{utc_now}.jpg",
-                    )
+                if chat["picture_mode"] == "Disabled":
+                    with suppress(TelegramBadRequest):
+                        await bot.send_message(
+                            chat_id=chat["id"],
+                            text=message_text,
+                            entities=message_entities,
+                            link_preview_options=types.LinkPreviewOptions(
+                                is_disabled=True
+                            ),
+                            request_timeout=180.0,
+                        )
+                elif chat["picture_mode"] == "Stream start screenshot":
+                    stream_picture = None
+                    if stream_picture_id == None:
+                        utc_now = datetime.now(tz=timezone.utc).strftime(
+                            "%Y_%m_%d_%H_%M_%S"
+                        )
+                        stream_picture = types.URLInputFile(
+                            stream_info["thumbnail_url"].format(
+                                width="1920", height="1080"
+                            ),
+                            filename=f"{streamer_login}_{utc_now}.jpg",
+                        )
 
-                with suppress(TelegramBadRequest):
-                    sended_message = await bot.send_photo(
-                        chat_id=chat["id"],
-                        photo=(stream_picture_id or stream_picture),
-                        caption=message_text,
-                        caption_entities=message_entities,
-                    )
-                if stream_picture_id == None:
-                    file_size = 0
-                    for photo in sended_message.photo:
-                        if photo.file_size > file_size:
-                            stream_picture_id = photo.file_id
-            elif chat["picture_mode"] == "Own pic":
-                with suppress(TelegramBadRequest):
-                    await bot.send_photo(
-                        chat_id=chat["id"],
-                        photo=chat["picture_id"],
-                        caption=message_text,
-                        caption_entities=message_entities,
-                    )
-            else:
-                pass
+                    with suppress(TelegramBadRequest):
+                        sended_message = await bot.send_photo(
+                            chat_id=chat["id"],
+                            photo=(stream_picture_id or stream_picture),
+                            caption=message_text,
+                            caption_entities=message_entities,
+                            request_timeout=180.0,
+                        )
+                    if stream_picture_id == None:
+                        file_size = 0
+                        for photo in sended_message.photo:
+                            if photo.file_size > file_size:
+                                stream_picture_id = photo.file_id
+                elif chat["picture_mode"] == "Own pic":
+                    with suppress(TelegramBadRequest):
+                        await bot.send_photo(
+                            chat_id=chat["id"],
+                            photo=chat["picture_id"],
+                            caption=message_text,
+                            caption_entities=message_entities,
+                            request_timeout=180.0,
+                        )
+                else:
+                    pass
+
+                cfg.logger.info(f"Chat {chat['id']} sended with {chat['picture_mode']}")
+            except Exception as exc:
+                if cfg.ENV != "dev":
+                    with suppress(TelegramBadRequest):
+                        await bot.send_message(
+                            chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                            text=f"ADMIN MESSAGE\nNOTIFICATION CHAT ERROR\nFROM {event.get('broadcaster_user_name')}\nTO {chat['id']}\n{exc}",
+                        )
+                cfg.logger.error(exc)
+                traceback.print_exception(exc)
+            await asyncio.sleep(1)
     except Exception as exc:
         if cfg.ENV != "dev":
             with suppress(TelegramBadRequest):
                 await bot.send_message(
                     chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
-                    text=f"ADMIN MESSAGE\nNOTIFICATION ERROR\n{exc}",
+                    text=f"ADMIN MESSAGE\nNOTIFICATION ERROR\nFROM {event.get('broadcaster_user_name')}\n{exc}",
                 )
         cfg.logger.error(exc)
         traceback.print_exception(exc)
@@ -162,10 +186,21 @@ async def revoke_subscriptions(event: dict) -> None:
         )
         message_text, message_entities = message.render()
         for user in users:
-            with suppress(TelegramBadRequest):
-                await bot.send_message(
-                    chat_id=user, text=message_text, entities=message_entities
-                )
+            try:
+                with suppress(TelegramBadRequest):
+                    await bot.send_message(
+                        chat_id=user, text=message_text, entities=message_entities
+                    )
+            except Exception as exc:
+                if cfg.ENV != "dev":
+                    with suppress(TelegramBadRequest):
+                        await bot.send_message(
+                            chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                            text=f"ADMIN MESSAGE\nREVOKATION NOTIFICATION ERROR\nFROM {event.get('condition', {}).get('broadcaster_user_id')}\nTO {user}\n{exc}",
+                        )
+                cfg.logger.error(exc)
+                traceback.print_exception(exc)
+            await asyncio.sleep(1)
         if cfg.TELEGRAM_BOT_OWNER_ID not in users:
             message = Text(
                 "ADMIN MESSAGE\nSubscription to ",
@@ -186,7 +221,7 @@ async def revoke_subscriptions(event: dict) -> None:
             with suppress(TelegramBadRequest):
                 await bot.send_message(
                     chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
-                    text=f"ADMIN MESSAGE\nREVOKATION ERROR\n{exc}",
+                    text=f"ADMIN MESSAGE\nREVOKATION ERROR\nFROM {event.get('condition', {}).get('broadcaster_user_id')}\n{exc}",
                 )
         cfg.logger.error(exc)
         traceback.print_exception(exc)
