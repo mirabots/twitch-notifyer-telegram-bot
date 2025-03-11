@@ -107,7 +107,8 @@ async def send_notifications_to_chats(event: dict, message_id: str) -> None:
                         )
                         stream_picture = types.URLInputFile(
                             stream_info["thumbnail_url"].format(
-                                width="1920", height="1080"
+                                width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
+                                height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
                             ),
                             filename=f"{streamer_login}_{utc_now}.jpg",
                         )

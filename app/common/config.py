@@ -150,6 +150,14 @@ class ConfigManager:
         except Exception:
             no_secrets.append(f"{self.ENV}/twitch")
 
+        # twitch thumbnail
+        twitch_thumbnail_data = self.secrets_data.get(f"{self.ENV}/twitch/thumbnail")
+        try:
+            self.TWITCH_THUMBNAIL_WIDTH: int = twitch_thumbnail_data["width"]
+            self.TWITCH_THUMBNAIL_HEIGHT: int = twitch_thumbnail_data["height"]
+        except Exception:
+            no_secrets.append(f"{self.ENV}/twitch/thumbnail")
+
         # telegram
         telegram_data = self.secrets_data.get(f"{self.ENV}/telegram")
         try:
@@ -210,6 +218,34 @@ class ConfigManager:
             self.TELEGRAM_USERS = old_users_value
             updated_users = []
         return update_secrets_result, updated_users
+
+    async def update_thumbnail_size(self, width: int, height: int) -> str:
+        update_secrets_result = ""
+        try:
+            async with httpx.AsyncClient(
+                base_url=self.SECRETS_DOMAIN,
+                headers={self.SECRETS_HEADER: self.SECRETS_TOKEN},
+            ) as ac:
+                data = {"data": {"width": width, "height": height}}
+                response = await ac.put(
+                    f"/api/secrets/{self.ENV}/twitch/thumbnail", json=data
+                )
+                if response.status_code != 200:
+                    update_secrets_result = (
+                        f"Error updating data in secrets - {response.status_code}"
+                    )
+        except Exception as e:
+            update_secrets_result = f"Error updating data in secrets - {e}"
+
+        if not update_secrets_result:
+            self.TWITCH_THUMBNAIL_WIDTH = width
+            self.TWITCH_THUMBNAIL_HEIGHT = height
+            self.secrets_data[f"{self.ENV}/twitch/thumbnail"] = {
+                "width": width,
+                "height": height,
+            }
+
+        return update_secrets_result
 
 
 cfg = ConfigManager()

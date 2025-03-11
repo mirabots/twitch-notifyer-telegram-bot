@@ -602,9 +602,11 @@ async def picture_streamer_form(
                 orig_photo = photo
 
         if orig_photo.width < 1000:
-            message_text = f"Picture is small ({orig_photo.width}px width)\nNo changes"
+            message_text = (
+                f"Picture is small ({orig_photo.width} < 1000 px width)\nNo changes"
+            )
         elif orig_photo.width < orig_photo.height:
-            message_text = "Picture is not in landscape mode\nNo changes"
+            message_text = "Picture is not in landscape/square format\nNo changes"
         else:
             await crud_subs.change_picture_mode(
                 chat_id, streamer_id, "Own pic", orig_photo.file_id
@@ -708,7 +710,10 @@ async def notification_test_message_handler(
     elif sub_picture_mode == "Stream start screenshot":
         utc_now = datetime.now(tz=timezone.utc).strftime("%Y_%m_%d_%H_%M_%S")
         stream_picture = types.URLInputFile(
-            stream_info["thumbnail_url"].format(width="1920", height="1080"),
+            stream_info["thumbnail_url"].format(
+                width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
+                height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
+            ),
             filename=f"{streamer_login}_{utc_now}.jpg",
         )
 
