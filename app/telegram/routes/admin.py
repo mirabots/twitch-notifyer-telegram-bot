@@ -768,7 +768,7 @@ async def thumbnail_form(message: types.Message, state: FSMContext, bot: Bot) ->
             raise
 
         if new_width < 1000:
-            message_text = "New width is lower 1000px width"
+            message_text = "New width is lower 1000px"
         elif new_width < new_height:
             message_text = "Size is not in landscape/square format"
         else:
