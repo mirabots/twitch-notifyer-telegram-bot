@@ -29,6 +29,7 @@ from telegram.utils.forms import (
     FormBroadcastMessage,
     FormDump,
     FormLimitDefault,
+    FormThumbnailSize,
     FormUserLimit,
     FromUserRename,
 )
@@ -727,3 +728,56 @@ async def broadcast_message_form(
 
     with suppress(TelegramBadRequest):
         await message.answer(text=admin_message)
+
+
+@router.message(Command("thumbnail"))
+async def thumbnail_handler(message: types.Message, state: FSMContext):
+    abort_keyboard = get_keyboard_abort("thmbnl")
+    with suppress(TelegramBadRequest):
+        sended_message = await message.answer(
+            text=f"Currend size is {cfg.TWITCH_THUMBNAIL_WIDTH}x{cfg.TWITCH_THUMBNAIL_HEIGHT} (WxH)\nSend new:",
+            reply_markup=abort_keyboard.as_markup(),
+        )
+
+        await state.set_data({"outgoing_form_message_id": sended_message.message_id})
+        await state.set_state(FormThumbnailSize.size)
+
+
+@router.message(FormThumbnailSize.size)
+async def thumbnail_form(message: types.Message, state: FSMContext, bot: Bot) -> None:
+    state_data = await state.get_data()
+    outgoing_form_message_id = state_data["outgoing_form_message_id"]
+    with suppress(TelegramBadRequest):
+        await bot.edit_message_reply_markup(
+            chat_id=message.chat.id,
+            message_id=outgoing_form_message_id,
+            reply_markup=None,
+        )
+    await state.clear()
+
+    size_text = (message.text or message.caption or "").strip()
+    sizes = size_text.lower().split("x")
+
+    message_text = "New size was set"
+
+    try:
+        new_width = int(sizes[0])
+        new_height = int(sizes[1])
+
+        if new_width <= 0 or new_height <= 0:
+            raise
+
+        if new_width < 1000:
+            message_text = "New width is lower 1000px"
+        elif new_width < new_height:
+            message_text = "Size is not in landscape/square format"
+        else:
+            update_result = await cfg.update_thumbnail_size(new_width, new_height)
+            if update_result:
+                message_text = f"Setting new default limit error:\n{update_result}"
+
+    except Exception:
+        message_text = "Incorrect size given"
+
+    with suppress(TelegramBadRequest):
+        await message.answer(text=message_text)

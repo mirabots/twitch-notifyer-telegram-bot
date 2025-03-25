@@ -35,3 +35,7 @@ class FormRestreamsLinks(StatesGroup):
 
 class FormBroadcastMessage(StatesGroup):
     message = State()
+
+
+class FormThumbnailSize(StatesGroup):
+    size = State()

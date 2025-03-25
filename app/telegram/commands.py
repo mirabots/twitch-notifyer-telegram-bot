@@ -25,6 +25,7 @@ COMMANDS_ADMIN = {
     "pause": "(Un)Pause bot",
     "secrets_reload": "Reload secrets",
     "dump": "Manage bot db dump",
+    "thumbnail": "Change thumbnail twitch size",
     "users": "List and manage users (+channels)",
     "limites": "User's limites",
     "streamers": "List subscribed streamers",
