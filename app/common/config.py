@@ -57,6 +57,9 @@ class ConfigManager:
             sys.exit(1)
         self.logger.info("Secrets were loaded")
         self.lock = asyncio.Lock()
+        self.notification_semaphore = asyncio.Semaphore(
+            20
+        )  # Telegram limit is 30 messages per second, so...
 
     def load_creds_sync(self) -> None:
         with open(self._config_file, "r") as f:
