@@ -88,6 +88,12 @@ async def check_passed_delay_event_message(streamer_id: str, delay: int) -> bool
         )
 
         if current_timestamp - last_timestamp > timedelta(seconds=delay):
+            # await session.execute(
+            #     update(Streamers)
+            #     .where(Streamers.id == streamer_id)
+            #     .values(last_message_timestamp=current_timestamp)
+            # )
+
             return True
         return False
 

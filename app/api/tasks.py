@@ -46,9 +46,9 @@ async def send_notifications(event: dict, message_id: str, timestamp: str) -> No
         return
 
     # based on Twitch docs recommendation
-    if not await crud_streamers.check_passed_delay_event_message(streamer_id, 600):
-        cfg.logger.error("Not passed 600 seconds delay between streamer notifications")
-        return
+    # if not await crud_streamers.check_passed_delay_event_message(streamer_id, 600):
+    #     cfg.logger.error("Not passed 600 seconds delay between streamer notifications")
+    #     return
 
     stream_info = await twitch.get_stream_info(streamer_id)
     if not stream_info:
