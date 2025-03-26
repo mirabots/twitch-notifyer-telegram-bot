@@ -13,6 +13,8 @@ from crud import subscriptions as crud_subs
 from telegram.bot import bot
 from twitch import functions as twitch
 
+# from dateutil.parser import parse as du_parse
+
 
 async def send_notifications(event: dict, message_id: str, timestamp: str) -> None:
     streamer_id = event.get("broadcaster_user_id", "0")
