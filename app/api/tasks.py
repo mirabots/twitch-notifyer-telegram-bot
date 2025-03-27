@@ -14,7 +14,7 @@ from telegram.bot import bot
 from twitch import functions as twitch
 
 
-async def send_notifications(event: dict, message_id: str, timestamp: str) -> None:
+async def send_notifications(event: dict, message_id: str) -> None:
     streamer_id = event.get("broadcaster_user_id", "0")
     streamer_login = event.get("broadcaster_user_login", "")
     streamer_name = event.get("broadcaster_user_name", "")
@@ -202,12 +202,12 @@ async def revoke_subscriptions(event: dict, reason: str) -> None:
 
 
 async def task_function(
-    event_type: str, event: dict, message_id: str, timestamp: str, status: str
+    event_type: str, event: dict, message_id: str, status: str
 ) -> None:
     async with cfg.notification_semaphore:
         try:
             if event_type == "notification":
-                await send_notifications(event, message_id, timestamp)
+                await send_notifications(event, message_id)
             elif event_type == "revocation":
                 await revoke_subscriptions(event, status)
             else:

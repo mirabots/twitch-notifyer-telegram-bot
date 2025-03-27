@@ -69,7 +69,6 @@ async def webhook_twitch(
                 event_type,
                 data.get("subscription", {}).get("condition", {}),
                 "",
-                "",
                 data.get("subscription", {}).get("status", ""),
             ),
         )
@@ -84,8 +83,6 @@ async def webhook_twitch(
                     event_type,
                     data.get("event", {}),
                     message_id,
-                    request.headers.get("Twitch-Eventsub-Message-Timestamp".lower())
-                    or "",
                     "",
                 ),
             )
