@@ -184,7 +184,7 @@ async def revoke_subscriptions(event: dict, reason: str) -> None:
                 )
         except Exception as exc:
             error_users[user] = str(exc)
-            cfg.logger.info(f"Chat {user} error: {exc}")
+            cfg.logger.info(f"User {user} error: {exc}")
             traceback.print_exception(exc)
         await asyncio.sleep(1)
 
