@@ -4,7 +4,7 @@ from typing import Any
 
 from aiogram import types
 from aiogram.exceptions import TelegramBadRequest
-from api.tasks import revoke_subscriptions, send_notifications_to_chats
+from api.tasks import task_function
 from api.verification import verify_telegram_secret, verify_twitch_secret
 from common.config import cfg
 from litestar import Request, Response, Router, post
@@ -65,7 +65,11 @@ async def webhook_twitch(
             status_code=HTTP_204_NO_CONTENT,
             content=None,
             background=BackgroundTask(
-                revoke_subscriptions, data.get("subscription", {})
+                task_function,
+                event_type,
+                data.get("subscription", {}).get("condition", {}),
+                "",
+                data.get("subscription", {}).get("status", ""),
             ),
         )
 
@@ -75,7 +79,11 @@ async def webhook_twitch(
                 status_code=HTTP_204_NO_CONTENT,
                 content=None,
                 background=BackgroundTask(
-                    send_notifications_to_chats, data.get("event", {}), message_id
+                    task_function,
+                    event_type,
+                    data.get("event", {}),
+                    message_id,
+                    "",
                 ),
             )
         else:
