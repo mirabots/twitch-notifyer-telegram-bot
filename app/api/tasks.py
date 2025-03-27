@@ -64,6 +64,7 @@ async def send_notifications(event: dict, message_id: str) -> None:
     chats = await crud_subs.get_subscribed_chats(streamer_id)
     cfg.logger.info(f"Chats: {[chat['id'] for chat in chats]}")
 
+    error_chats = {}
     for chat in chats:
         try:
             template = Template(chat["template"] or "$streamer_name started stream")
@@ -133,15 +134,20 @@ async def send_notifications(event: dict, message_id: str) -> None:
 
             cfg.logger.info(f"Chat {chat['id']} sended with {chat['picture_mode']}")
         except Exception as exc:
-            if cfg.ENV != "dev":
-                with suppress(TelegramBadRequest):
-                    await bot.send_message(
-                        chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
-                        text=f"ADMIN MESSAGE\nNOTIFICATION CHAT ERROR\nFROM {streamer_name}\nTO {chat['id']}\n{exc}",
-                    )
-            cfg.logger.error(exc)
+            error_chats[chat["id"]] = str(exc)
+            cfg.logger.info(f"Chat {chat['id']} error: {exc}")
             traceback.print_exception(exc)
         await asyncio.sleep(1)
+
+    if cfg.ENV != "dev" and error_chats:
+        with suppress(TelegramBadRequest):
+            error_string = "\n".join(
+                [f"{chat}: {err}" for chat, err in error_chats.items()]
+            )
+            await bot.send_message(
+                chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                text=f"ADMIN MESSAGE\nNOTIFICATION CHAT ERROR\nFROM {streamer_name}:\n{error_string}",
+            )
 
 
 async def revoke_subscriptions(event: dict, reason: str) -> None:
@@ -168,6 +174,8 @@ async def revoke_subscriptions(event: dict, reason: str) -> None:
         reason,
     )
     message_text, message_entities = message.render()
+
+    error_users = {}
     for user in users:
         try:
             with suppress(TelegramBadRequest):
@@ -175,15 +183,21 @@ async def revoke_subscriptions(event: dict, reason: str) -> None:
                     chat_id=user, text=message_text, entities=message_entities
                 )
         except Exception as exc:
-            if cfg.ENV != "dev":
-                with suppress(TelegramBadRequest):
-                    await bot.send_message(
-                        chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
-                        text=f"ADMIN MESSAGE\nREVOKATION NOTIFICATION ERROR\nFROM {streamer_id}\nTO {user}\n{exc}",
-                    )
-            cfg.logger.error(exc)
+            error_users[user] = str(exc)
+            cfg.logger.info(f"Chat {user} error: {exc}")
             traceback.print_exception(exc)
         await asyncio.sleep(1)
+
+    if cfg.ENV != "dev" and error_users:
+        with suppress(TelegramBadRequest):
+            error_string = "\n".join(
+                [f"{user}: {err}" for user, err in error_users.items()]
+            )
+            await bot.send_message(
+                chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
+                text=f"ADMIN MESSAGE\nREVOKATION ERROR\nFROM {streamer_id}:\n{error_string}",
+            )
+
     if cfg.TELEGRAM_BOT_OWNER_ID not in users:
         message = Text(
             "ADMIN MESSAGE\nSubscription to ",
@@ -225,5 +239,5 @@ async def task_function(
                         chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
                         text=f"ADMIN MESSAGE\n{event_type.upper()} ERROR\nFROM {broadcaster}\n{exc}",
                     )
-            cfg.logger.error(exc)
+            cfg.logger.error(f"Error {event_type} from {broadcaster}: {exc}")
             traceback.print_exception(exc)
