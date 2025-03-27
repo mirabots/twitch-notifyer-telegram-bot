@@ -13,8 +13,10 @@ from crud import subscriptions as crud_subs
 from telegram.bot import bot
 from twitch import functions as twitch
 
+# from dateutil.parser import parse as du_parse
 
-async def send_notifications(event: dict, message_id: str) -> None:
+
+async def send_notifications(event: dict, message_id: str, timestamp: str) -> None:
     streamer_id = event.get("broadcaster_user_id", "0")
     streamer_login = event.get("broadcaster_user_login", "")
     streamer_name = event.get("broadcaster_user_name", "")
@@ -32,9 +34,21 @@ async def send_notifications(event: dict, message_id: str) -> None:
     streamer_login = event.get("broadcaster_user_login", streamer_name_db.lower())
     streamer_name = event.get("broadcaster_user_name", streamer_name_db)
 
+    # ???
+    # Twitch docs recommendation
+    # if datetime.now(timezone.utc) - du_parse(timestamp) > timedelta(seconds=600):
+    #     cfg.logger.error("Event message older than 600 seconds")
+    #     return
+
+    # Twitch docs recommendation
     if await crud_streamers.check_duplicate_event_message(streamer_id, message_id):
         cfg.logger.error("Duplicated event message")
         return
+
+    # based on Twitch docs recommendation
+    # if not await crud_streamers.check_passed_delay_event_message(streamer_id, 600):
+    #     cfg.logger.error("Not passed 600 seconds delay between streamer notifications")
+    #     return
 
     stream_info = await twitch.get_stream_info(streamer_id)
     if not stream_info:
@@ -216,12 +230,12 @@ async def revoke_subscriptions(event: dict, reason: str) -> None:
 
 
 async def task_function(
-    event_type: str, event: dict, message_id: str, status: str
+    event_type: str, event: dict, message_id: str, timestamp: str, status: str
 ) -> None:
     async with cfg.notification_semaphore:
         try:
             if event_type == "notification":
-                await send_notifications(event, message_id)
+                await send_notifications(event, message_id, timestamp)
             elif event_type == "revocation":
                 await revoke_subscriptions(event, status)
             else:
