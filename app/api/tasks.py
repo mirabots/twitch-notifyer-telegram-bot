@@ -135,7 +135,7 @@ async def send_notifications(event: dict, message_id: str) -> None:
             cfg.logger.info(f"Chat {chat['id']} sended with {chat['picture_mode']}")
         except Exception as exc:
             error_chats[chat["id"]] = str(exc)
-            cfg.logger.info(f"Chat {chat['id']} error: {exc}")
+            cfg.logger.error(f"Chat {chat['id']} error: {exc}")
             traceback.print_exception(exc)
         await asyncio.sleep(1)
 
@@ -148,6 +148,7 @@ async def send_notifications(event: dict, message_id: str) -> None:
                 chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
                 text=f"ADMIN MESSAGE\nNOTIFICATION CHAT ERROR\nFROM {streamer_name}:\n{error_string}",
             )
+        await asyncio.sleep(1)
 
 
 async def revoke_subscriptions(event: dict, reason: str) -> None:
@@ -184,7 +185,7 @@ async def revoke_subscriptions(event: dict, reason: str) -> None:
                 )
         except Exception as exc:
             error_users[user] = str(exc)
-            cfg.logger.info(f"User {user} error: {exc}")
+            cfg.logger.error(f"User {user} error: {exc}")
             traceback.print_exception(exc)
         await asyncio.sleep(1)
 
@@ -197,6 +198,7 @@ async def revoke_subscriptions(event: dict, reason: str) -> None:
                 chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
                 text=f"ADMIN MESSAGE\nREVOKATION ERROR\nFROM {streamer_id}:\n{error_string}",
             )
+        await asyncio.sleep(1)
 
     if cfg.TELEGRAM_BOT_OWNER_ID not in users:
         message = Text(
@@ -213,6 +215,7 @@ async def revoke_subscriptions(event: dict, reason: str) -> None:
                 text=message_text,
                 entities=message_entities,
             )
+        await asyncio.sleep(1)
 
 
 async def task_function(

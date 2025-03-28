@@ -365,6 +365,7 @@ async def limit_default_callback_update_users(
     old_limit = copy(cfg.TELEGRAM_LIMIT_DEFAULT)
     update_result, updated_users = await cfg.update_limit_default(value, users_update)
     message_text = f"Default limit was changed\nFor {updated_users}"
+    error_users = {}
     for user in updated_users:
         try:
             await crud_users.update_user(user, {"limit": cfg.TELEGRAM_LIMIT_DEFAULT})
@@ -374,14 +375,19 @@ async def limit_default_callback_update_users(
                     text=f"Your limit was changed from {old_limit} to {cfg.TELEGRAM_LIMIT_DEFAULT}",
                 )
         except Exception as exc:
-            if cfg.ENV != "dev":
-                with suppress(TelegramBadRequest):
-                    await callback.message.answer(
-                        text=f"MESSAGE ERROR\nTO {user}\n{exc}"
-                    )
-            cfg.logger.error(exc)
+            error_users[user] = str(exc)
+            cfg.logger.error(f"User {user} error: {exc}")
             traceback.print_exception(exc)
         await asyncio.sleep(1)
+
+    if cfg.ENV != "dev" and error_users:
+        with suppress(TelegramBadRequest):
+            error_string = "\n".join(
+                [f"{chat}: {err}" for chat, err in error_users.items()]
+            )
+            await callback.message.answer(text=f"MESSAGE ERROR\n{error_string}")
+        await asyncio.sleep(1)
+
     if update_result:
         message_text = f"Setting new default limit error:\n{update_result}"
 
@@ -695,6 +701,7 @@ async def broadcast_message_form(
     if not (message_text or picture_id):
         admin_message = "Can't send empty message"
     else:
+        error_users = {}
         for user_id in cfg.TELEGRAM_USERS:
             if user_id != cfg.TELEGRAM_BOT_OWNER_ID:
                 try:
@@ -717,14 +724,18 @@ async def broadcast_message_form(
                                 ),
                             )
                 except Exception as exc:
-                    if cfg.ENV != "dev":
-                        with suppress(TelegramBadRequest):
-                            await message.answer(
-                                text=f"MESSAGE ERROR\nTO {user_id}\n{exc}"
-                            )
-                    cfg.logger.error(exc)
+                    error_users[user_id] = str(exc)
+                    cfg.logger.error(f"User {user_id} error: {exc}")
                     traceback.print_exception(exc)
                 await asyncio.sleep(1)
+
+        if cfg.ENV != "dev" and error_users:
+            with suppress(TelegramBadRequest):
+                error_string = "\n".join(
+                    [f"{chat}: {err}" for chat, err in error_users.items()]
+                )
+                await message.answer(text=f"MESSAGE ERROR\n{error_string}")
+            await asyncio.sleep(1)
 
     with suppress(TelegramBadRequest):
         await message.answer(text=admin_message)
