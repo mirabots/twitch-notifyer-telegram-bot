@@ -709,12 +709,15 @@ async def notification_test_message_handler(
             )
     elif sub_picture_mode == "Stream start screenshot":
         utc_now = datetime.now(tz=timezone.utc).strftime("%Y_%m_%d_%H_%M_%S_%f")
-        stream_picture = (
+        stream_picture = types.URLInputFile(
+            # stream_picture = (
             stream_info["thumbnail_url"].format(
                 width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
                 height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
-            )
-            + f"?timestamp={utc_now}"
+            ),
+            filename=f"{streamer_login}_{utc_now}.jpg",
+            # )
+            # + f"?timestamp={utc_now}"
         )
 
         with suppress(TelegramBadRequest):

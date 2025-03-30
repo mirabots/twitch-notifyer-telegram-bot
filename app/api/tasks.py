@@ -99,7 +99,14 @@ async def send_notifications(event: dict, message_id: str) -> None:
                     utc_now = datetime.now(tz=timezone.utc).strftime(
                         "%Y_%m_%d_%H_%M_%S_%f"
                     )
-                    stream_picture = (
+                    stream_picture = types.URLInputFile(
+                        stream_info["thumbnail_url"].format(
+                            width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
+                            height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
+                        ),
+                        filename=f"{streamer_login}_{utc_now}.jpg",
+                    )
+                    stream_picture_url = (
                         stream_info["thumbnail_url"].format(
                             width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
                             height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
@@ -115,6 +122,14 @@ async def send_notifications(event: dict, message_id: str) -> None:
                         caption_entities=message_entities,
                         request_timeout=180.0,
                     )
+                    if chat["id"] == cfg.TELEGRAM_BOT_OWNER_ID:
+                        await bot.send_photo(
+                            chat_id=chat["id"],
+                            photo=stream_picture_url,
+                            caption=message_text,
+                            caption_entities=message_entities,
+                            request_timeout=180.0,
+                        )
                 if stream_picture_id == None:
                     file_size = 0
                     for photo in sended_message.photo:
