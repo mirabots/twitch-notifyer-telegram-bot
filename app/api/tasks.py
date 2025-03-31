@@ -117,6 +117,7 @@ async def send_notifications(event: dict, message_id: str) -> None:
                         + f"?timestamp={utc_now_url}"
                     )
 
+                sended_message = None
                 with suppress(TelegramBadRequest):
                     if chat["id"] == cfg.TELEGRAM_BOT_OWNER_ID:
                         cfg.logger.info(f"Chat {chat['id']} sending")
@@ -145,7 +146,8 @@ async def send_notifications(event: dict, message_id: str) -> None:
                             caption_entities=message_entities,
                             request_timeout=180.0,
                         )
-                if stream_picture_id == None:
+                # if stream_picture_id == None:
+                if stream_picture_id == None and sended_message:
                     file_size = 0
                     for photo in sended_message.photo:
                         if photo.file_size > file_size:
