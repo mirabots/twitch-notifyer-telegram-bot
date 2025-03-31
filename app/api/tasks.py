@@ -97,6 +97,9 @@ async def send_notifications(event: dict, message_id: str) -> None:
                 stream_picture = None
                 if stream_picture_id == None:
                     utc_now = datetime.now(tz=timezone.utc).strftime(
+                        "%Y_%m_%d_%H_%M_%S"
+                    )
+                    utc_now_url = datetime.now(tz=timezone.utc).strftime(
                         "%Y_%m_%d_%H_%M_%S_%f"
                     )
                     stream_picture = types.URLInputFile(
@@ -111,21 +114,33 @@ async def send_notifications(event: dict, message_id: str) -> None:
                             width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
                             height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
                         )
-                        + f"?timestamp={utc_now}"
+                        + f"?timestamp={utc_now_url}"
                     )
 
                 with suppress(TelegramBadRequest):
-                    sended_message = await bot.send_photo(
-                        chat_id=chat["id"],
-                        photo=(stream_picture_id or stream_picture),
-                        caption=message_text,
-                        caption_entities=message_entities,
-                        request_timeout=180.0,
-                    )
                     if chat["id"] == cfg.TELEGRAM_BOT_OWNER_ID:
+                        cfg.logger.info(f"Chat {chat['id']} sending")
                         await bot.send_photo(
                             chat_id=chat["id"],
                             photo=stream_picture_url,
+                            caption=message_text,
+                            caption_entities=message_entities,
+                            request_timeout=180.0,
+                        )
+                        cfg.logger.info(f"Chat {chat['id']} sended pic with url")
+                        await bot.send_message(
+                            chat_id=chat["id"],
+                            text=f"Thumbnail_url {stream_picture_url}",
+                            link_preview_options=types.LinkPreviewOptions(
+                                is_disabled=True
+                            ),
+                            request_timeout=180.0,
+                        )
+                        cfg.logger.info(f"Chat {chat['id']} sended url")
+                    else:
+                        sended_message = await bot.send_photo(
+                            chat_id=chat["id"],
+                            photo=(stream_picture_id or stream_picture),
                             caption=message_text,
                             caption_entities=message_entities,
                             request_timeout=180.0,
