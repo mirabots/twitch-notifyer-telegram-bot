@@ -97,57 +97,27 @@ async def send_notifications(event: dict, message_id: str) -> None:
                 stream_picture = None
                 if stream_picture_id == None:
                     utc_now = datetime.now(tz=timezone.utc).strftime(
-                        "%Y_%m_%d_%H_%M_%S"
-                    )
-                    utc_now_url = datetime.now(tz=timezone.utc).strftime(
                         "%Y_%m_%d_%H_%M_%S_%f"
                     )
-                    stream_picture = types.URLInputFile(
-                        stream_info["thumbnail_url"].format(
-                            width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
-                            height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
-                        ),
-                        filename=f"{streamer_login}_{utc_now}.jpg",
+                    stream_thumbnail = stream_info["thumbnail_url"].format(
+                        width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
+                        height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
                     )
-                    stream_picture_url = (
-                        stream_info["thumbnail_url"].format(
-                            width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
-                            height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
+                    stream_picture = stream_thumbnail + f"?timestamp={utc_now}"
+                    if cfg.TWITCH_THUMBNAIL_TELEGRAM_MODE == "file":
+                        stream_picture = types.URLInputFile(
+                            stream_thumbnail, filename=f"{streamer_login}_{utc_now}.jpg"
                         )
-                        + f"?timestamp={utc_now_url}"
-                    )
 
-                sended_message = None
                 with suppress(TelegramBadRequest):
-                    if chat["id"] == cfg.TELEGRAM_BOT_OWNER_ID:
-                        cfg.logger.info(f"Chat {chat['id']} sending")
-                        await bot.send_photo(
-                            chat_id=chat["id"],
-                            photo=stream_picture_url,
-                            caption=message_text,
-                            caption_entities=message_entities,
-                            request_timeout=180.0,
-                        )
-                        cfg.logger.info(f"Chat {chat['id']} sended pic with url")
-                        await bot.send_message(
-                            chat_id=chat["id"],
-                            text=f"Thumbnail_url {stream_picture_url}",
-                            link_preview_options=types.LinkPreviewOptions(
-                                is_disabled=True
-                            ),
-                            request_timeout=180.0,
-                        )
-                        cfg.logger.info(f"Chat {chat['id']} sended url")
-                    else:
-                        sended_message = await bot.send_photo(
-                            chat_id=chat["id"],
-                            photo=(stream_picture_id or stream_picture),
-                            caption=message_text,
-                            caption_entities=message_entities,
-                            request_timeout=180.0,
-                        )
-                # if stream_picture_id == None:
-                if stream_picture_id == None and sended_message:
+                    sended_message = await bot.send_photo(
+                        chat_id=chat["id"],
+                        photo=(stream_picture_id or stream_picture),
+                        caption=message_text,
+                        caption_entities=message_entities,
+                        request_timeout=180.0,
+                    )
+                if stream_picture_id == None:
                     file_size = 0
                     for photo in sended_message.photo:
                         if photo.file_size > file_size:
