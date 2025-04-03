@@ -157,6 +157,9 @@ class ConfigManager:
         try:
             self.TWITCH_THUMBNAIL_WIDTH: int = twitch_thumbnail_data["width"]
             self.TWITCH_THUMBNAIL_HEIGHT: int = twitch_thumbnail_data["height"]
+            self.TWITCH_THUMBNAIL_TELEGRAM_MODE: str = twitch_thumbnail_data[
+                "telegram_mode"
+            ]
         except Exception:
             no_secrets.append(f"{self.ENV}/twitch/thumbnail")
 
