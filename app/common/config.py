@@ -7,6 +7,7 @@ import httpx
 import requests
 import yaml
 from aiofile import async_open
+from cachetools import TTLCache
 from common.utils import (
     disable_unnecessary_loggers,
     generate_code,
@@ -59,6 +60,10 @@ class ConfigManager:
         self.lock = asyncio.Lock()
         # Telegram limit is 30 messages per second, so...
         self.notification_semaphore = asyncio.Semaphore(20)
+        self.notification_lock = asyncio.Lock()
+        self.notification_locks_cache = TTLCache(
+            ttl=2 * float(self.TWITCH_EVENTS_DELAY), maxsize=10000.0
+        )
 
     def load_creds_sync(self) -> None:
         with open(self._config_file, "r") as f:
@@ -160,6 +165,17 @@ class ConfigManager:
         except Exception:
             no_secrets.append(f"{self.ENV}/twitch/thumbnail")
 
+        # twitch events delay
+        twitch_events_delay_data = self.secrets_data.get(
+            f"{self.ENV}/twitch/events_delay"
+        )
+        try:
+            self.TWITCH_EVENTS_DELAY: int = int(
+                twitch_events_delay_data["delay_seconds"]
+            )
+        except Exception:
+            no_secrets.append(f"{self.ENV}/twitch/events_delay")
+
         # telegram
         telegram_data = self.secrets_data.get(f"{self.ENV}/telegram")
         try:
@@ -245,6 +261,36 @@ class ConfigManager:
             self.secrets_data[f"{self.ENV}/twitch/thumbnail"] = {
                 "width": width,
                 "height": height,
+            }
+
+        return update_secrets_result
+
+    async def get_event_lock(self, event_id) -> asyncio.Lock:
+        async with self.notification_lock:
+            return self.notification_locks_cache.setdefault(event_id, asyncio.Lock())
+
+    async def update_event_delay(self, delay_seconds: int) -> str:
+        update_secrets_result = ""
+        try:
+            async with httpx.AsyncClient(
+                base_url=self.SECRETS_DOMAIN,
+                headers={self.SECRETS_HEADER: self.SECRETS_TOKEN},
+            ) as ac:
+                data = {"data": {"delay_seconds": delay_seconds}}
+                response = await ac.put(
+                    f"/api/secrets/{self.ENV}/twitch/events_delay", json=data
+                )
+                if response.status_code != 200:
+                    update_secrets_result = (
+                        f"Error updating data in secrets - {response.status_code}"
+                    )
+        except Exception as e:
+            update_secrets_result = f"Error updating data in secrets - {e}"
+
+        if not update_secrets_result:
+            self.TWITCH_EVENTS_DELAY = delay_seconds
+            self.secrets_data[f"{self.ENV}/twitch/events_delay"] = {
+                "delay_seconds": delay_seconds
             }
 
         return update_secrets_result

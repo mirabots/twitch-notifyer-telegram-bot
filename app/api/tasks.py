@@ -1,7 +1,7 @@
 import asyncio
 import traceback
 from contextlib import suppress
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from string import Template
 
 from aiogram import types
@@ -22,13 +22,15 @@ async def send_notifications(event: dict, message_id: str, timestamp: str) -> No
     streamer_name = event.get("broadcaster_user_name", "")
 
     cfg.logger.info(f"Notification ({message_id}): {streamer_login} ({streamer_id})")
+    update_data = {}
 
-    streamer_name_db = await crud_streamers.check_streamer(streamer_id)
-    if streamer_name_db == None:
+    streamer_db = await crud_streamers.get_streamer(streamer_id)
+    streamer_name_db = streamer_db.get("name")
+    if not streamer_db:
         cfg.logger.error("Streamer not in db")
         return
     elif streamer_name != "" and streamer_name_db != streamer_name:
-        await crud_streamers.update_streamer_name(streamer_id, streamer_name)
+        update_data["name"] = streamer_name
         streamer_name_db = streamer_name
 
     streamer_login = event.get("broadcaster_user_login", streamer_name_db.lower())
@@ -41,14 +43,22 @@ async def send_notifications(event: dict, message_id: str, timestamp: str) -> No
     #     return
 
     # Twitch docs recommendation
-    if await crud_streamers.check_duplicate_event_message(streamer_id, message_id):
+    if message_id == streamer_db["last_message"]:
         cfg.logger.error("Duplicated event message")
         return
+    update_data["last_message"] = message_id
 
     # based on Twitch docs recommendation
-    # if not await crud_streamers.check_passed_delay_event_message(streamer_id, 600):
-    #     cfg.logger.error("Not passed 600 seconds delay between streamer notifications")
-    #     return
+    current_timestamp = datetime.now(timezone.utc)
+    if cfg.TWITCH_EVENTS_DELAY and current_timestamp - streamer_db[
+        "last_message_timestamp"
+    ] < timedelta(seconds=cfg.TWITCH_EVENTS_DELAY):
+        cfg.logger.error("Not passed 300 seconds delay between streamer notifications")
+        return
+    update_data["last_message_timestamp"] = current_timestamp
+
+    if update_data:
+        await crud_streamers.update_streamer_meta(streamer_id, update_data)
 
     stream_info = await twitch.get_stream_info(streamer_id)
     if not stream_info:
@@ -234,12 +244,13 @@ async def task_function(
 ) -> None:
     async with cfg.notification_semaphore:
         try:
-            if event_type == "notification":
-                await send_notifications(event, message_id, timestamp)
-            elif event_type == "revocation":
-                await revoke_subscriptions(event, status)
-            else:
-                return
+            async with cfg.get_event_lock(event.get("broadcaster_user_id", "0")):
+                if event_type == "notification":
+                    await send_notifications(event, message_id, timestamp)
+                elif event_type == "revocation":
+                    await revoke_subscriptions(event, status)
+                else:
+                    return
         except Exception as exc:
             broadcaster = ""
             if event_type == "notification":

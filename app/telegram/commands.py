@@ -31,6 +31,7 @@ COMMANDS_ADMIN = {
     "streamers": "List subscribed streamers",
     "costs": "Twitch API costs",
     "broadcast_message": "Broadcast message to all users",
+    "event_delay": "Change twitch events delay",
     "version": "Bot version",
 }
 

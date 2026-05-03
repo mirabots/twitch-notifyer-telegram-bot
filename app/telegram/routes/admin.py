@@ -28,6 +28,7 @@ from telegram.utils.callbacks import (
 from telegram.utils.forms import (
     FormBroadcastMessage,
     FormDump,
+    FormEventDelay,
     FormLimitDefault,
     FormThumbnailSize,
     FormUserLimit,
@@ -778,6 +779,47 @@ async def thumbnail_form(message: types.Message, state: FSMContext, bot: Bot) ->
 
     except Exception:
         message_text = "Incorrect size given"
+
+    with suppress(TelegramBadRequest):
+        await message.answer(text=message_text)
+
+
+@router.message(Command("event_delay"))
+async def event_delay_handler(message: types.Message, state: FSMContext):
+    abort_keyboard = get_keyboard_abort("evntdl")
+    with suppress(TelegramBadRequest):
+        sended_message = await message.answer(
+            text=f"Current delay is {cfg.TWITCH_EVENTS_DELAY} seconds\nSend new (int >= 0):",
+            reply_markup=abort_keyboard.as_markup(),
+        )
+
+        await state.set_data({"outgoing_form_message_id": sended_message.message_id})
+        await state.set_state(FormEventDelay.delay)
+
+
+@router.message(FormEventDelay.delay)
+async def event_delay_form(message: types.Message, state: FSMContext, bot: Bot) -> None:
+    state_data = await state.get_data()
+    outgoing_form_message_id = state_data["outgoing_form_message_id"]
+    with suppress(TelegramBadRequest):
+        await bot.edit_message_reply_markup(
+            chat_id=message.chat.id,
+            message_id=outgoing_form_message_id,
+            reply_markup=None,
+        )
+    await state.clear()
+
+    message_text = "New delay was set"
+    try:
+        new_delay = int((message.text or "").strip())
+        if new_delay < 0:
+            raise
+        update_result = await cfg.update_event_delay(new_delay)
+        if update_result:
+            message_text = f"Setting new delay error:\n{update_result}"
+
+    except Exception:
+        message_text = "Incorrect delay given"
 
     with suppress(TelegramBadRequest):
         await message.answer(text=message_text)

@@ -39,3 +39,7 @@ class FormBroadcastMessage(StatesGroup):
 
 class FormThumbnailSize(StatesGroup):
     size = State()
+
+
+class FormEventDelay(StatesGroup):
+    delay = State()
