@@ -415,7 +415,7 @@ async def template_streamer_handler(
     main_keyboard.attach(abort_keyboard)
     with suppress(TelegramBadRequest):
         sended_message = await callback.message.answer(
-            text="Enter new template\nDefault is:\n$streamer_name started stream",
+            text="Enter new template\nDefault is:\n$streamer_name is live",
             reply_markup=main_keyboard.as_markup(),
         )
 
@@ -684,7 +684,7 @@ async def notification_test_message_handler(
     stream_category = stream_info.get("category", default_category) or default_category
     stream_details = f"\n● {stream_title}\n○ {stream_category}\n"
 
-    template = Template(sub_template or "$streamer_name started stream")
+    template = Template(sub_template or "$streamer_name is live")
     filled_template = template.safe_substitute({"streamer_name": streamer_name})
     if sub_template == "":
         filled_template = ""
@@ -708,14 +708,16 @@ async def notification_test_message_handler(
                 request_timeout=180.0,
             )
     elif sub_picture_mode == "Stream start screenshot":
-        utc_now = datetime.now(tz=timezone.utc).strftime("%Y_%m_%d_%H_%M_%S")
-        stream_picture = types.URLInputFile(
-            stream_info["thumbnail_url"].format(
-                width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
-                height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
-            ),
-            filename=f"{streamer_login}_{utc_now}.jpg",
+        utc_now = datetime.now(tz=timezone.utc).strftime("%Y_%m_%d_%H_%M_%S_%f")
+        stream_thumbnail = stream_info["thumbnail_url"].format(
+            width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
+            height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
         )
+        stream_picture = stream_thumbnail + f"?timestamp={utc_now}"
+        if cfg.TWITCH_THUMBNAIL_TELEGRAM_MODE == "file":
+            stream_picture = types.URLInputFile(
+                stream_thumbnail, filename=f"{streamer_login}_{utc_now}.jpg"
+            )
 
         with suppress(TelegramBadRequest):
             await bot.send_photo(

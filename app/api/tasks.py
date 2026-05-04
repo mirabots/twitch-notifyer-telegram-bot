@@ -91,7 +91,7 @@ async def send_notifications(event: dict, message_id: str, timestamp: str) -> No
     error_chats = {}
     for chat in chats:
         try:
-            template = Template(chat["template"] or "$streamer_name started stream")
+            template = Template(chat["template"] or "$streamer_name is live")
             filled_template = template.safe_substitute({"streamer_name": streamer_name})
             if chat["template"] == "":
                 filled_template = ""
@@ -121,15 +121,17 @@ async def send_notifications(event: dict, message_id: str, timestamp: str) -> No
                 stream_picture = None
                 if stream_picture_id == None:
                     utc_now = datetime.now(tz=timezone.utc).strftime(
-                        "%Y_%m_%d_%H_%M_%S"
+                        "%Y_%m_%d_%H_%M_%S_%f"
                     )
-                    stream_picture = types.URLInputFile(
-                        stream_info["thumbnail_url"].format(
-                            width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
-                            height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
-                        ),
-                        filename=f"{streamer_login}_{utc_now}.jpg",
+                    stream_thumbnail = stream_info["thumbnail_url"].format(
+                        width=str(cfg.TWITCH_THUMBNAIL_WIDTH),
+                        height=str(cfg.TWITCH_THUMBNAIL_HEIGHT),
                     )
+                    stream_picture = stream_thumbnail + f"?timestamp={utc_now}"
+                    if cfg.TWITCH_THUMBNAIL_TELEGRAM_MODE == "file":
+                        stream_picture = types.URLInputFile(
+                            stream_thumbnail, filename=f"{streamer_login}_{utc_now}.jpg"
+                        )
 
                 with suppress(TelegramBadRequest):
                     sended_message = await bot.send_photo(
@@ -159,7 +161,7 @@ async def send_notifications(event: dict, message_id: str, timestamp: str) -> No
             cfg.logger.info(f"Chat {chat['id']} sended with {chat['picture_mode']}")
         except Exception as exc:
             error_chats[chat["id"]] = str(exc)
-            cfg.logger.info(f"Chat {chat['id']} error: {exc}")
+            cfg.logger.error(f"Chat {chat['id']} error: {exc}")
             traceback.print_exception(exc)
         await asyncio.sleep(1)
 
@@ -172,6 +174,7 @@ async def send_notifications(event: dict, message_id: str, timestamp: str) -> No
                 chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
                 text=f"ADMIN MESSAGE\nNOTIFICATION CHAT ERROR\nFROM {streamer_name}:\n{error_string}",
             )
+        await asyncio.sleep(1)
 
 
 async def revoke_subscriptions(event: dict, reason: str) -> None:
@@ -208,7 +211,7 @@ async def revoke_subscriptions(event: dict, reason: str) -> None:
                 )
         except Exception as exc:
             error_users[user] = str(exc)
-            cfg.logger.info(f"User {user} error: {exc}")
+            cfg.logger.error(f"User {user} error: {exc}")
             traceback.print_exception(exc)
         await asyncio.sleep(1)
 
@@ -221,6 +224,7 @@ async def revoke_subscriptions(event: dict, reason: str) -> None:
                 chat_id=cfg.TELEGRAM_BOT_OWNER_ID,
                 text=f"ADMIN MESSAGE\nREVOKATION ERROR\nFROM {streamer_id}:\n{error_string}",
             )
+        await asyncio.sleep(1)
 
     if cfg.TELEGRAM_BOT_OWNER_ID not in users:
         message = Text(
@@ -237,6 +241,7 @@ async def revoke_subscriptions(event: dict, reason: str) -> None:
                 text=message_text,
                 entities=message_entities,
             )
+        await asyncio.sleep(1)
 
 
 async def task_function(
