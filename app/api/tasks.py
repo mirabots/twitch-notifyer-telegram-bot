@@ -53,7 +53,9 @@ async def send_notifications(event: dict, message_id: str, timestamp: str) -> No
     if cfg.TWITCH_EVENTS_DELAY and current_timestamp - streamer_db[
         "last_message_timestamp"
     ] < timedelta(seconds=cfg.TWITCH_EVENTS_DELAY):
-        cfg.logger.error("Not passed 300 seconds delay between streamer notifications")
+        cfg.logger.error(
+            f"Not passed {cfg.TWITCH_EVENTS_DELAY} seconds delay between streamer notifications"
+        )
         return
     update_data["last_message_timestamp"] = current_timestamp
 
