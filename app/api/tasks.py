@@ -58,7 +58,7 @@ async def send_notifications(event: dict, message_id: str, timestamp: str) -> No
     update_data["last_message_timestamp"] = current_timestamp
 
     if update_data:
-        await crud_streamers.update_streamer_meta(streamer_id, update_data)
+        await crud_streamers.update_streamer_data(streamer_id, update_data)
 
     stream_info = await twitch.get_stream_info(streamer_id)
     if not stream_info:
@@ -249,7 +249,7 @@ async def task_function(
 ) -> None:
     async with cfg.notification_semaphore:
         try:
-            async with cfg.get_event_lock(event.get("broadcaster_user_id", "0")):
+            async with await cfg.get_event_lock(event.get("broadcaster_user_id", "0")):
                 if event_type == "notification":
                     await send_notifications(event, message_id, timestamp)
                 elif event_type == "revocation":
