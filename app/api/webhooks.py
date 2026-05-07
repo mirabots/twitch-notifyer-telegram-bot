@@ -17,7 +17,7 @@ from telegram.bot import bot, dp
 async def webhook_telegram(data: dict[str, Any], headers: dict[str, str]) -> Any:
     verify_telegram_secret(headers)
 
-    cfg.logger.debug(data)
+    cfg.logger.info(data)
     try:
         telegram_update = types.Update(**data)
         await dp.feed_update(bot=bot, update=telegram_update)
