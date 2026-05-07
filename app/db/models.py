@@ -1,6 +1,8 @@
+from datetime import datetime
+
 from sqlalchemy import MetaData
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column
-from sqlalchemy.types import BIGINT, JSON, Text
+from sqlalchemy.types import BIGINT, JSON, TIMESTAMP, Text
 
 SCHEMA = "tntb"
 Base = declarative_base(metadata=MetaData(schema=SCHEMA))
@@ -28,6 +30,9 @@ class Streamers(Base):
     name: Mapped[str] = mapped_column(nullable=False)
     subscription_id: Mapped[str] = mapped_column(nullable=False)
     last_message: Mapped[str] = mapped_column(nullable=True)
+    last_message_timestamp: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=False
+    )
 
 
 class Subscriptions(Base):
