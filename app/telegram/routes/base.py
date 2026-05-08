@@ -133,7 +133,7 @@ async def stop_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
     if not chat_owner:
         return
     if user_id not in allowed_manage_users:
-        message_text = f"Notification\nBot leaved from channel '{chat_title}' by '{user_name}'\n(but not deleted from bot)"
+        message_text = f"Notification\nBot leaved from channel '{chat_title}' by '{user_name}'\n(but not deleted from bot's db - need to re-add)"
         with suppress(TelegramBadRequest):
             await bot.send_message(chat_id=chat_owner, text=message_text)
         return
