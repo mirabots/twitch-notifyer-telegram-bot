@@ -210,6 +210,7 @@ async def abort_handler(
         DUMPR = "Restoring dump operation was aborted"
         BMSG = "Broadcast messaging operation was aborted"
         THMBNL = "Thumbnail size change operation was aborted"
+        EVNTDL = "Event delay change operation was aborted"
 
         @classmethod
         def _missing_(cls, _):

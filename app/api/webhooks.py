@@ -17,7 +17,7 @@ from telegram.bot import bot, dp
 async def webhook_telegram(data: dict[str, Any], headers: dict[str, str]) -> Any:
     verify_telegram_secret(headers)
 
-    cfg.logger.debug(data)
+    cfg.logger.info(data)
     try:
         telegram_update = types.Update(**data)
         await dp.feed_update(bot=bot, update=telegram_update)
@@ -69,6 +69,7 @@ async def webhook_twitch(
                 event_type,
                 data.get("subscription", {}).get("condition", {}),
                 "",
+                "",
                 data.get("subscription", {}).get("status", ""),
             ),
         )
@@ -83,6 +84,8 @@ async def webhook_twitch(
                     event_type,
                     data.get("event", {}),
                     message_id,
+                    request.headers.get("Twitch-Eventsub-Message-Timestamp".lower())
+                    or "",
                     "",
                 ),
             )

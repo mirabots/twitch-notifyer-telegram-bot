@@ -1,6 +1,6 @@
 import yaml
 
-APP_VERSION = "2.19.35"
+APP_VERSION = "2.20.36"
 
 APP_VERSION_DETAILS = {}
 with open("config/versions.yaml", "r") as f:

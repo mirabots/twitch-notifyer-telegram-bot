@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from db.common import async_session
 from db.models import Streamers
 from sqlalchemy import delete, insert, select, update
@@ -7,6 +9,22 @@ async def get_all_streamers() -> dict[str, str]:
     async with async_session() as session, session.begin():
         db_streamers = await session.scalars(select(Streamers))
         return {streamer.id: streamer.name for streamer in db_streamers}
+
+
+async def get_streamer(streamer_id: str) -> dict:
+    async with async_session() as session, session.begin():
+        db_streamer = await session.scalar(
+            select(Streamers).where(Streamers.id == streamer_id)
+        )
+        if not db_streamer:
+            return {}
+        return {
+            "id": streamer_id,
+            "name": db_streamer.name,
+            "subscription_id": db_streamer.subscription_id,
+            "last_message": db_streamer.last_message,
+            "last_message_timestamp": db_streamer.last_message_timestamp,
+        }
 
 
 async def check_streamer(streamer_id: str) -> str | None:
@@ -35,6 +53,9 @@ async def add_streamer(
                     "id": streamer_id,
                     "name": streamer_name,
                     "subscription_id": subscription_id,
+                    "last_message_timestamp": datetime.fromisoformat(
+                        "1970-01-01 00:00+00:00"
+                    ),
                 }
             )
         )
@@ -50,22 +71,11 @@ async def update_streamer_name(streamer_id: str, streamer_name: str) -> None:
         )
 
 
-async def check_duplicate_event_message(streamer_id: str, message_id: str) -> bool:
+async def update_streamer_data(streamer_id: str, data: dict) -> None:
     async with async_session() as session, session.begin():
-        db_streamer = await session.scalar(
-            select(Streamers).where(
-                Streamers.id == streamer_id, Streamers.last_message == message_id
-            )
-        )
-        if db_streamer:
-            return True
-
         await session.execute(
-            update(Streamers)
-            .where(Streamers.id == streamer_id)
-            .values(last_message=message_id)
+            update(Streamers).where(Streamers.id == streamer_id).values(data)
         )
-        return False
 
 
 async def remove_streamer(streamer_id: str) -> None:
