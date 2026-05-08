@@ -126,16 +126,14 @@ async def stop_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
     chat_title = event.chat.title
     user_id = event.from_user.id
     user_name = event.from_user.full_name + f" ({event.from_user.username})"
-    user_channel_status = (await bot.get_chat_member(chat_id, user_id)).status
+    self_bot_id = (await bot.me()).id
+    chat_owner = await crud_chats.get_chat_owner(chat_id)
+    allowed_manage_users = (self_bot_id, chat_owner)
 
-    if not (await crud_chats.chat_exists(chat_id)):
+    if not chat_owner:
         return
-    if (
-        user_name not in cfg.TELEGRAM_USERS
-        or user_channel_status != ChatMemberStatus.CREATOR
-    ):
-        chat_owner = await crud_chats.get_chat_owner(chat_id)
-        message_text = f"Notification\nBot leaved from channel '{chat_title}' by '{user_name}'\n(but not deleted from bot)"
+    if user_id not in allowed_manage_users:
+        message_text = f"Notification\nBot leaved from channel '{chat_title}' by '{user_name}'\n(but not deleted from bot's db - need to re-add)"
         with suppress(TelegramBadRequest):
             await bot.send_message(chat_id=chat_owner, text=message_text)
         return
@@ -149,7 +147,7 @@ async def stop_channel_handler(event: types.ChatMemberUpdated, bot: Bot):
 
     message_text = f"Notification\nBot leaved from channel '{chat_title}'"
     with suppress(TelegramBadRequest):
-        await bot.send_message(chat_id=user_id, text=message_text)
+        await bot.send_message(chat_id=chat_owner, text=message_text)
 
 
 @router.message(Command("info"))
